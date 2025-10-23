@@ -149,7 +149,7 @@ func TestGenerateAccessToken(t *testing.T) {
 
 			// Call the function
 			ctx := context.Background()
-			result, err := client.generateAccessToken(ctx, server.Client(), tc.clientSecret, tc.username, tc.password)
+			result, err := client.generateAccessToken(ctx, server.Client(), tc.clientSecret, tc.username, tc.password, "test_client_id")
 
 			// Check error
 			if tc.expectError && err == nil {
