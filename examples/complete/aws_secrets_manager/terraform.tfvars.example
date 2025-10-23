@@ -1,0 +1,17 @@
+# Example values - replace with your own
+host = "guardium.example.com"
+port = "8443"
+
+# Authentication credentials
+client_id     = "admin"
+client_secret = "admin"
+username      = "admin"
+password      = "admin"
+
+aws_config_name     = "my-aws-config"
+auth_type           = "Security-Credentials"
+# Example credentials - replace with your own
+access_key_id       = "AKIAIOSFODNN7EXAMPLE"  # Example format, not a real key
+secret_access_key   = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"  # Example format, not a real key
+secret_key_username = "username"
+secret_key_password = "password"
