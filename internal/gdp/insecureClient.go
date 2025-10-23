@@ -10,19 +10,7 @@ type InsecureClient struct {
 	Client Client
 }
 
-var (
-	httpProtocol  = "http"
-	httpsProtocol = "http"
-)
-
 func (c *Client) NewInsecureClient() *InsecureClient {
-	//if strings.HasPrefix("http", c.Host) {
-	//	c.Host = strings.TrimPrefix("http://", c.Host)
-	//	c.protocol = httpProtocol
-	//} else {
-	//	c.Host = strings.TrimPrefix("https://", c.Host)
-	//	c.protocol = httpsProtocol
-	//}
 
 	return &InsecureClient{
 		Client{

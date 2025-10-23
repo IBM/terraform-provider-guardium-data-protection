@@ -132,7 +132,12 @@ func TestGenerateAccessToken(t *testing.T) {
 
 				// Set response status and body
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				_, err := w.Write([]byte(tc.serverResponse))
+
+				// Check error
+				if err == nil {
+					t.Error("Expected error but got nil")
+				}
 			}))
 			defer server.Close()
 
