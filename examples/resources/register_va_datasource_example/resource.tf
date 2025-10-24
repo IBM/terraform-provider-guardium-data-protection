@@ -22,9 +22,9 @@ resource "guardium-data-protection_register_va_datasource" "example" {
   connection_username    = "db_user"
   connection_password    = "db_password"
   severity_level         = "high"
-  
+
   # Boolean flags
-  save_password        = true
-  use_ssl              = true
+  save_password          = true
+  use_ssl                = true
   import_server_ssl_cert = true
 }

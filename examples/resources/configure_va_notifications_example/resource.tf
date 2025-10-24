@@ -9,12 +9,12 @@ data "guardium-data-protection_authentication" "access_token" {
 # Configure vulnerability assessment notifications for a datasource
 resource "guardium-data-protection_configure_va_notifications" "example" {
   # Required parameters
-  datasource_name      = "example-datasource"
-  notification_type    = "email"
-  notification_emails  = ["admin@example.com", "security@example.com"]
+  datasource_name       = "example-datasource"
+  notification_type     = "email"
+  notification_emails   = ["admin@example.com", "security@example.com"]
   notification_severity = "high"
-  access_token         = data.guardium-data-protection_authentication.access_token.access_token
+  access_token          = data.guardium-data-protection_authentication.access_token.access_token
 
   # Optional parameters
-  enabled              = true
+  enabled = true
 }

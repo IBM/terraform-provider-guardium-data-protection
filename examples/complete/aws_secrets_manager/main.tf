@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     guardium-data-protection = {
-      source = "hashicorp.com/ibm/guardium-data-protection"
+      source  = "hashicorp.com/ibm/guardium-data-protection"
       version = "1.0.0"
     }
   }
@@ -21,11 +21,11 @@ data "guardium-data-protection_authentication" "auth" {
 }
 
 resource "guardium-data-protection_aws_secrets_manager" "example" {
-  access_token       = data.guardium-data-protection_authentication.auth.access_token
-  name               = var.aws_config_name
-  auth_type          = var.auth_type
-  access_key_id      = var.access_key_id
-  secret_access_key  = var.secret_access_key
+  access_token        = data.guardium-data-protection_authentication.auth.access_token
+  name                = var.aws_config_name
+  auth_type           = var.auth_type
+  access_key_id       = var.access_key_id
+  secret_access_key   = var.secret_access_key
   secret_key_username = var.secret_key_username
   secret_key_password = var.secret_key_password
 }

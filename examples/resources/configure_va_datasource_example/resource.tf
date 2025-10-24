@@ -16,5 +16,5 @@ resource "guardium-data-protection_configure_va_datasource" "example" {
   access_token        = data.guardium-data-protection_authentication.access_token.access_token
 
   # Optional parameters
-  enabled             = true
+  enabled = true
 }

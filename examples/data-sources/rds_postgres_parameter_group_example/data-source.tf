@@ -8,7 +8,7 @@ provider "guardium-data-protection" {
 # Retrieve information about an RDS PostgreSQL parameter group
 data "guardium-data-protection_rds_postgres_parameter_group" "example" {
   db_identifier = "my-postgres-db"
-  region        = "us-west-2"  # Optional: Specify the AWS region
+  region        = "us-west-2" # Optional: Specify the AWS region
 }
 
 # Output the parameter group details
