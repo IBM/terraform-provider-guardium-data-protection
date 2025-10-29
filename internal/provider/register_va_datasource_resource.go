@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"strconv"
 	"time"
 
@@ -112,17 +113,25 @@ func (r *registerVADatasourceResource) Create(ctx context.Context, req resource.
 		return
 	}
 
-	unquotedPayload, err := strconv.Unquote(data.Payload.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Failed to unquote payload",
-			fmt.Sprintf("Failed to unquote payload: %s.", err.Error()),
-		)
-		return
+	var (
+		payload = data.Payload.ValueString()
+		err     error
+	)
+
+	if payload[0] == '"' {
+		payload, err = strconv.Unquote(data.Payload.ValueString())
+		if err != nil {
+			tflog.Info(ctx, fmt.Sprintf("payload %s", data.Payload.ValueString()))
+			resp.Diagnostics.AddError(
+				"Failed to unquote payload",
+				fmt.Sprintf("Failed to unquote payload: %s.", err.Error()),
+			)
+			return
+		}
 	}
 
 	if data.CAPath.IsNull() {
-		err := r.client.NewInsecureClient().RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(unquotedPayload))
+		err := r.client.NewInsecureClient().RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(payload))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Failed to register va",
@@ -171,16 +180,25 @@ func (r *registerVADatasourceResource) Update(ctx context.Context, req resource.
 		return
 	}
 
-	unquotedPayload, err := strconv.Unquote(data.Payload.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Failed to unquote payload",
-			fmt.Sprintf("Failed to unquote payload: %s.", err.Error()),
-		)
-		return
+	var (
+		payload = data.Payload.ValueString()
+		err     error
+	)
+
+	if payload[0] == '"' {
+		payload, err = strconv.Unquote(data.Payload.ValueString())
+		if err != nil {
+			tflog.Info(ctx, fmt.Sprintf("payload %s", data.Payload.ValueString()))
+			resp.Diagnostics.AddError(
+				"Failed to unquote payload",
+				fmt.Sprintf("Failed to unquote payload: %s.", err.Error()),
+			)
+			return
+		}
 	}
+
 	if data.CAPath.IsNull() {
-		err := r.client.NewInsecureClient().RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(unquotedPayload))
+		err := r.client.NewInsecureClient().RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(payload))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Failed to register va",
