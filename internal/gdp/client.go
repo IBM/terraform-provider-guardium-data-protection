@@ -91,6 +91,11 @@ type ImportProfilesFromFileRequest struct {
 	Path       string `json:"path"`
 }
 
+type ImportProfilesFromFileResponse struct {
+	ID      string `json:"ID"`
+	Message string `json:"Message"`
+}
+
 // ImportProfilesFromFile imports profiles from a file
 func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Client, accessToken, pathToFile string, updateMode bool) error {
 	// Prepare the request URL
@@ -124,14 +129,55 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error reading response body: %w", err)
+	}
+
 	// Check the response status
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
+	// Parse the response body to check for errors in the Message field
+	var apiResponse ImportProfilesFromFileResponse
+	if err := json.Unmarshal(body, &apiResponse); err != nil {
+		tflog.Warn(ctx, "failed to parse import profiles response, continuing anyway: "+err.Error())
+		tflog.Debug(ctx, "sent request to import profiles from file response "+string(body))
+		return nil
+	}
+
 	tflog.Debug(ctx, "sent request to import profiles from file response "+string(body))
+
+	// Check if the Message field contains an error
+	// The API returns ID="0" for both success and failure, so we must check the Message field
+	if apiResponse.Message != "" && containsErrorKeywords(apiResponse.Message) {
+		return fmt.Errorf("import profiles failed: %s", apiResponse.Message)
+	}
+
 	return nil
+}
+
+// containsErrorKeywords checks if a message contains error-indicating keywords
+func containsErrorKeywords(message string) bool {
+	errorKeywords := []string{
+		"not found",
+		"not supported",
+		"failed",
+		"error",
+		"invalid",
+		"could not",
+		"unable to",
+		"does not exist",
+	}
+
+	messageLower := bytes.ToLower([]byte(message))
+	for _, keyword := range errorKeywords {
+		if bytes.Contains(messageLower, []byte(keyword)) {
+			return true
+		}
+	}
+	return false
 }
 
 type bulkInstallRequestBody struct {
@@ -146,7 +192,8 @@ var (
 )
 
 type bulkInstallConnectorResponse struct {
-	Message string `json:"message"`
+	ID      string `json:"ID"`
+	Message string `json:"Message"`
 }
 
 // BulkInstallConnector installs connectors in bulk
@@ -187,20 +234,29 @@ func (c *Client) BulkInstallConnector(ctx context.Context, httpClient *http.Clie
 	// Check the response status
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("error reading response body: %w", err)
 	}
 
 	parsedBody := new(bulkInstallConnectorResponse)
 	if err = json.Unmarshal(body, parsedBody); err != nil {
-		return err
+		tflog.Warn(ctx, "failed to parse bulk install response, continuing anyway: "+err.Error())
+		tflog.Debug(ctx, "install connector response "+string(body))
+		return nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
+	// Check for known error messages in the predefined map
 	if _, k := bulkInstallErrors[parsedBody.Message]; k {
-		return fmt.Errorf(parsedBody.Message)
+		return fmt.Errorf("bulk install failed: %s", parsedBody.Message)
+	}
+
+	// Also check if the Message field contains error keywords
+	// The API may return ID="0" but still have an error in the Message field
+	if parsedBody.Message != "" && containsErrorKeywords(parsedBody.Message) {
+		return fmt.Errorf("bulk install failed: %s", parsedBody.Message)
 	}
 
 	tflog.Debug(ctx, "install connector response "+string(body))
