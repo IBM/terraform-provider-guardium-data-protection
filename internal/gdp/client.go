@@ -9,8 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -97,30 +100,106 @@ type ImportProfilesFromFileResponse struct {
 }
 
 // ImportProfilesFromFile imports profiles from a file
+// Supports two methods:
+// 1. Multipart upload: If pathToFile exists locally, uploads file content via multipart/form-data
+// 2. Legacy SFTP: If pathToFile doesn't exist locally (server path), sends JSON with server path
 func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Client, accessToken, pathToFile string, updateMode bool) error {
 	// Prepare the request URL
 	importProfilesFromFileUrl := fmt.Sprintf("%s://%s:%s/restAPI/importProfilesFromFile", c.protocol, c.Host, c.port)
 
-	// Prepare the request body
-	requestBody := ImportProfilesFromFileRequest{
-		UpdateMode: updateMode,
-		Path:       pathToFile,
-	}
+	// Detect if this is a local file path or server path by checking if file exists locally
+	_, err := os.Stat(pathToFile)
+	isLocalFile := err == nil
 
-	jsonBody, err := json.Marshal(requestBody)
-	if err != nil {
-		return fmt.Errorf("error marshaling request body: %w", err)
-	}
+	var req *http.Request
 
-	// Create the request
-	req, err := http.NewRequestWithContext(ctx, "POST", importProfilesFromFileUrl, bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return fmt.Errorf("error creating request: %w", err)
-	}
+	if isLocalFile {
+		// NEW METHOD: Multipart upload for local files
+		tflog.Info(ctx, "Detected local file - using multipart upload", map[string]any{"pathToFile": pathToFile})
+		
+		file, err := os.Open(pathToFile)
+		if err != nil {
+			tflog.Error(ctx, "Error opening local file", map[string]any{"pathToFile": pathToFile, "error": err.Error()})
+			return fmt.Errorf("error opening file %s: %w", pathToFile, err)
+		}
+		defer file.Close()
 
-	// Set headers
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-	req.Header.Set("Content-Type", "application/json")
+		// Create multipart form data
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		// Add the file to the multipart form
+		part, err := writer.CreateFormFile("path", filepath.Base(pathToFile))
+		if err != nil {
+			return fmt.Errorf("error creating form file: %w", err)
+		}
+
+		_, err = io.Copy(part, file)
+		if err != nil {
+			return fmt.Errorf("error copying file content: %w", err)
+		}
+
+		// Add updateMode parameter
+		updateModeStr := "false"
+		if updateMode {
+			updateModeStr = "true"
+		}
+		err = writer.WriteField("updateMode", updateModeStr)
+		if err != nil {
+			return fmt.Errorf("error writing updateMode field: %w", err)
+		}
+
+		// Add TestConnections parameter
+		err = writer.WriteField("TestConnections", "false")
+		if err != nil {
+			return fmt.Errorf("error writing TestConnections field: %w", err)
+		}
+
+		err = writer.Close()
+		if err != nil {
+			return fmt.Errorf("error closing multipart writer: %w", err)
+		}
+
+		// Create the request
+		req, err = http.NewRequestWithContext(ctx, "POST", importProfilesFromFileUrl, body)
+		if err != nil {
+			return fmt.Errorf("error creating request: %w", err)
+		}
+
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		tflog.Info(ctx, "Sending multipart upload request", map[string]any{
+			"url": importProfilesFromFileUrl,
+			"contentType": writer.FormDataContentType(),
+		})
+	} else {
+		// LEGACY METHOD: JSON API with server path (for SFTP)
+		tflog.Info(ctx, "File not found locally - using legacy SFTP method with server path", map[string]any{"pathToFile": pathToFile})
+		
+		requestBody := ImportProfilesFromFileRequest{
+			UpdateMode: updateMode,
+			Path:       pathToFile,
+		}
+
+		jsonBody, err := json.Marshal(requestBody)
+		if err != nil {
+			return fmt.Errorf("error marshaling request body: %w", err)
+		}
+
+		req, err = http.NewRequestWithContext(ctx, "POST", importProfilesFromFileUrl, bytes.NewBuffer(jsonBody))
+		if err != nil {
+			return fmt.Errorf("error creating request: %w", err)
+		}
+
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+		req.Header.Set("Content-Type", "application/json")
+
+		tflog.Info(ctx, "Sending JSON request with server path", map[string]any{
+			"url": importProfilesFromFileUrl,
+			"serverPath": pathToFile,
+		})
+	}
 
 	// Send the request
 	resp, err := httpClient.Do(req)
@@ -129,28 +208,32 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body: %w", err)
 	}
 
+	tflog.Info(ctx, "Received response", map[string]any{
+		"statusCode": resp.StatusCode,
+		"responseBody": string(responseBody),
+	})
+
 	// Check the response status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
+		return fmt.Errorf("error response from server: %s, status code: %d", string(responseBody), resp.StatusCode)
 	}
 
-	// Parse the response body to check for errors in the Message field
+	// Parse the response body to check for errors
 	var apiResponse ImportProfilesFromFileResponse
-	if err := json.Unmarshal(body, &apiResponse); err != nil {
+	if err := json.Unmarshal(responseBody, &apiResponse); err != nil {
 		tflog.Warn(ctx, "failed to parse import profiles response, continuing anyway: "+err.Error())
-		tflog.Debug(ctx, "sent request to import profiles from file response "+string(body))
+		tflog.Debug(ctx, "sent request to import profiles from file response "+string(responseBody))
 		return nil
 	}
 
-	tflog.Debug(ctx, "sent request to import profiles from file response "+string(body))
+	tflog.Debug(ctx, "sent request to import profiles from file response "+string(responseBody))
 
 	// Check if the Message field contains an error
-	// The API returns ID="0" for both success and failure, so we must check the Message field
 	if apiResponse.Message != "" && containsErrorKeywords(apiResponse.Message) {
 		return fmt.Errorf("import profiles failed: %s", apiResponse.Message)
 	}
