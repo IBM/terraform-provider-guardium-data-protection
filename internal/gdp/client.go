@@ -116,7 +116,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	if isLocalFile {
 		// NEW METHOD: Multipart upload for local files
 		tflog.Info(ctx, "Detected local file - using multipart upload", map[string]any{"pathToFile": pathToFile})
-		
+
 		file, err := os.Open(pathToFile)
 		if err != nil {
 			tflog.Error(ctx, "Error opening local file", map[string]any{"pathToFile": pathToFile, "error": err.Error()})
@@ -170,13 +170,13 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		tflog.Info(ctx, "Sending multipart upload request", map[string]any{
-			"url": importProfilesFromFileUrl,
+			"url":         importProfilesFromFileUrl,
 			"contentType": writer.FormDataContentType(),
 		})
 	} else {
 		// LEGACY METHOD: JSON API with server path (for SFTP)
 		tflog.Info(ctx, "File not found locally - using legacy SFTP method with server path", map[string]any{"pathToFile": pathToFile})
-		
+
 		requestBody := ImportProfilesFromFileRequest{
 			UpdateMode: updateMode,
 			Path:       pathToFile,
@@ -196,7 +196,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 		req.Header.Set("Content-Type", "application/json")
 
 		tflog.Info(ctx, "Sending JSON request with server path", map[string]any{
-			"url": importProfilesFromFileUrl,
+			"url":        importProfilesFromFileUrl,
 			"serverPath": pathToFile,
 		})
 	}
@@ -214,7 +214,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 
 	tflog.Info(ctx, "Received response", map[string]any{
-		"statusCode": resp.StatusCode,
+		"statusCode":   resp.StatusCode,
 		"responseBody": string(responseBody),
 	})
 
