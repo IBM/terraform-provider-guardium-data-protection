@@ -99,107 +99,77 @@ type ImportProfilesFromFileResponse struct {
 	Message string `json:"Message"`
 }
 
-// ImportProfilesFromFile imports profiles from a file
-// Supports two methods:
-// 1. Multipart upload: If pathToFile exists locally, uploads file content via multipart/form-data
-// 2. Legacy SFTP: If pathToFile doesn't exist locally (server path), sends JSON with server path
+// ImportProfilesFromFile imports profiles from a local file using multipart/form-data upload
+// Requires GDP 12.2.1 or higher
 func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Client, accessToken, pathToFile string, updateMode bool) error {
 	// Prepare the request URL
 	importProfilesFromFileUrl := fmt.Sprintf("%s://%s:%s/restAPI/importProfilesFromFile", c.protocol, c.Host, c.port)
 
-	// Detect if this is a local file path or server path by checking if file exists locally
+	// Verify file exists locally
 	_, err := os.Stat(pathToFile)
-	isLocalFile := err == nil
-
-	var req *http.Request
-
-	if isLocalFile {
-		// NEW METHOD: Multipart upload for local files
-		tflog.Info(ctx, "Detected local file - using multipart upload", map[string]any{"pathToFile": pathToFile})
-
-		file, err := os.Open(pathToFile)
-		if err != nil {
-			tflog.Error(ctx, "Error opening local file", map[string]any{"pathToFile": pathToFile, "error": err.Error()})
-			return fmt.Errorf("error opening file %s: %w", pathToFile, err)
-		}
-		defer file.Close()
-
-		// Create multipart form data
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-
-		// Add the file to the multipart form
-		part, err := writer.CreateFormFile("path", filepath.Base(pathToFile))
-		if err != nil {
-			return fmt.Errorf("error creating form file: %w", err)
-		}
-
-		_, err = io.Copy(part, file)
-		if err != nil {
-			return fmt.Errorf("error copying file content: %w", err)
-		}
-
-		// Add updateMode parameter
-		updateModeStr := "false"
-		if updateMode {
-			updateModeStr = "true"
-		}
-		err = writer.WriteField("updateMode", updateModeStr)
-		if err != nil {
-			return fmt.Errorf("error writing updateMode field: %w", err)
-		}
-
-		// Add TestConnections parameter
-		err = writer.WriteField("TestConnections", "false")
-		if err != nil {
-			return fmt.Errorf("error writing TestConnections field: %w", err)
-		}
-
-		err = writer.Close()
-		if err != nil {
-			return fmt.Errorf("error closing multipart writer: %w", err)
-		}
-
-		// Create the request
-		req, err = http.NewRequestWithContext(ctx, "POST", importProfilesFromFileUrl, body)
-		if err != nil {
-			return fmt.Errorf("error creating request: %w", err)
-		}
-
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-
-		tflog.Info(ctx, "Sending multipart upload request", map[string]any{
-			"url":         importProfilesFromFileUrl,
-			"contentType": writer.FormDataContentType(),
-		})
-	} else {
-		// LEGACY METHOD: JSON API with server path (for SFTP)
-		tflog.Info(ctx, "File not found locally - using legacy SFTP method with server path", map[string]any{"pathToFile": pathToFile})
-
-		requestBody := ImportProfilesFromFileRequest{
-			UpdateMode: updateMode,
-			Path:       pathToFile,
-		}
-
-		jsonBody, err := json.Marshal(requestBody)
-		if err != nil {
-			return fmt.Errorf("error marshaling request body: %w", err)
-		}
-
-		req, err = http.NewRequestWithContext(ctx, "POST", importProfilesFromFileUrl, bytes.NewBuffer(jsonBody))
-		if err != nil {
-			return fmt.Errorf("error creating request: %w", err)
-		}
-
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
-		req.Header.Set("Content-Type", "application/json")
-
-		tflog.Info(ctx, "Sending JSON request with server path", map[string]any{
-			"url":        importProfilesFromFileUrl,
-			"serverPath": pathToFile,
-		})
+	if err != nil {
+		tflog.Error(ctx, "File not found", map[string]any{"pathToFile": pathToFile, "error": err.Error()})
+		return fmt.Errorf("file not found %s: %w (Note: SFTP upload is no longer supported, file must exist locally)", pathToFile, err)
 	}
+
+	tflog.Info(ctx, "Uploading profile file via multipart upload", map[string]any{"pathToFile": pathToFile})
+
+	file, err := os.Open(pathToFile)
+	if err != nil {
+		tflog.Error(ctx, "Error opening local file", map[string]any{"pathToFile": pathToFile, "error": err.Error()})
+		return fmt.Errorf("error opening file %s: %w", pathToFile, err)
+	}
+	defer file.Close()
+
+	// Create multipart form data
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add the file to the multipart form
+	part, err := writer.CreateFormFile("path", filepath.Base(pathToFile))
+	if err != nil {
+		return fmt.Errorf("error creating form file: %w", err)
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("error copying file content: %w", err)
+	}
+
+	// Add updateMode parameter
+	updateModeStr := "false"
+	if updateMode {
+		updateModeStr = "true"
+	}
+	err = writer.WriteField("updateMode", updateModeStr)
+	if err != nil {
+		return fmt.Errorf("error writing updateMode field: %w", err)
+	}
+
+	// Add TestConnections parameter
+	err = writer.WriteField("TestConnections", "false")
+	if err != nil {
+		return fmt.Errorf("error writing TestConnections field: %w", err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("error closing multipart writer: %w", err)
+	}
+
+	// Create the request
+	req, err := http.NewRequestWithContext(ctx, "POST", importProfilesFromFileUrl, body)
+	if err != nil {
+		return fmt.Errorf("error creating request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	tflog.Info(ctx, "Sending multipart upload request", map[string]any{
+		"url":         importProfilesFromFileUrl,
+		"contentType": writer.FormDataContentType(),
+	})
 
 	// Send the request
 	resp, err := httpClient.Do(req)
