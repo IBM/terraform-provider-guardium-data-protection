@@ -165,7 +165,9 @@ func TestGenerateAccessToken(t *testing.T) {
 
 				// Set response status and body
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -264,7 +266,9 @@ func TestGenerateAccessTokenWithGDPURLAndPort(t *testing.T) {
 				}
 
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"access_token":"valid-token"}`))
+				if _, err := w.Write([]byte(`{"access_token":"valid-token"}`)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -341,7 +345,9 @@ func TestGenerateAccessTokenInvalidCredentials(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -454,7 +460,7 @@ func TestImportProfilesFromFile(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create a temporary file for testing
-			tmpFile, err := os.CreateTemp("", "test-profile-*.json")
+			tmpFile, err := os.CreateTemp(t.TempDir(), "test-profile-*.json")
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
@@ -490,7 +496,9 @@ func TestImportProfilesFromFile(t *testing.T) {
 
 				// Set response status and body
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -609,7 +617,9 @@ func TestBulkInstallConnector(t *testing.T) {
 
 				// Set response status and body
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -662,23 +672,33 @@ func TestSharedTokenUsageBetweenVAAndUC(t *testing.T) {
 		case "/oauth/token":
 			// OAuth token endpoint
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"access_token":"shared-token-12345"}`))
+			if _, err := w.Write([]byte(`{"access_token":"shared-token-12345"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/datasource":
 			// VA datasource registration endpoint
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"ds-123","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"ds-123","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/va/config":
 			// VA configuration endpoint
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"config-456","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"config-456","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/bulkInstall":
 			// UC connector installation endpoint
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"ID":"install-789","Message":"success"}`))
+			if _, err := w.Write([]byte(`{"ID":"install-789","Message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/notifications":
 			// VA notifications endpoint
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"notif-101","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"notif-101","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -802,7 +822,9 @@ func TestClientProtocolConfiguration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"access_token":"test-token"}`))
+				if _, err := w.Write([]byte(`{"access_token":"test-token"}`)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -846,14 +868,18 @@ func TestTokenReuseAcrossMultipleClients(t *testing.T) {
 		switch r.URL.Path {
 		case "/oauth/token":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"access_token":"reusable-token"}`))
+			if _, err := w.Write([]byte(`{"access_token":"reusable-token"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/datasource", "/restAPI/bulkInstall":
 			authHeader := r.Header.Get("Authorization")
 			if strings.Contains(authHeader, "reusable-token") {
 				tokenUsageCount++
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		}
 	}))
 	defer server.Close()
