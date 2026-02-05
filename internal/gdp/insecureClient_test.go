@@ -122,7 +122,9 @@ func TestInsecureClient_TLSConfigVerification(t *testing.T) {
 	// Create a test HTTPS server with self-signed certificate
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"access_token":"test-token"}`))
+		if _, err := w.Write([]byte(`{"access_token":"test-token"}`)); err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
