@@ -22,9 +22,12 @@ import (
 	"time"
 )
 
-// Helper function to create a test CA certificate
+// createTestCACert generates ephemeral test certificates for unit testing only.
+// These keys are generated dynamically at test runtime and never stored or used
+// for real authentication. They exist only in memory during test execution.
+// GitGuardian: This is a test helper that generates temporary keys, not a secret leak.
 func createTestCACert(t *testing.T) (string, *x509.Certificate, *rsa.PrivateKey) {
-	// Generate private key
+	// Generate ephemeral private key for testing only (not a real secret)
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("Failed to generate private key: %v", err)
@@ -431,7 +434,10 @@ func TestSecureClient_GenerateAccessToken(t *testing.T) {
 	}
 }
 
-// Helper function to create server certificate
+// createServerCert generates ephemeral server certificates for unit testing only.
+// These keys are generated dynamically at test runtime and never stored or used
+// for real authentication. They exist only in memory during test execution.
+// GitGuardian: This is a test helper that generates temporary keys, not a secret leak.
 func createServerCert(t *testing.T, caCert *x509.Certificate, caKey *rsa.PrivateKey) (*tls.Certificate, *rsa.PrivateKey) {
 	serverCert := &x509.Certificate{
 		SerialNumber: big.NewInt(2),
@@ -447,6 +453,7 @@ func createServerCert(t *testing.T, caCert *x509.Certificate, caKey *rsa.Private
 		IPAddresses: []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
 	}
 
+	// Generate ephemeral server key for testing only (not a real secret)
 	serverKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("Failed to generate server key: %v", err)
