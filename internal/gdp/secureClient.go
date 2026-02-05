@@ -78,7 +78,7 @@ func (s *SecureClient) GenerateAccessToken(ctx context.Context, clientSecret, us
 		return "", fmt.Errorf("failed to create secure HTTP client: %w", err)
 	}
 
-	otr, err := s.Client.generateAccessToken(ctx, secureClient, clientSecret, username, password, clientId)
+	otr, err := s.generateAccessToken(ctx, secureClient, clientSecret, username, password, clientId)
 	if err != nil {
 		return "", err
 	}

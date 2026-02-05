@@ -56,6 +56,7 @@ func TestNewInsecureClient(t *testing.T) {
 
 			if insecureClient == nil {
 				t.Fatal("Expected InsecureClient to be created, got nil")
+				return
 			}
 
 			// Verify Host is preserved
@@ -199,7 +200,9 @@ func TestInsecureClient_GenerateAccessToken(t *testing.T) {
 				}
 
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -271,7 +274,9 @@ func TestInsecureClient_ImportProfilesFromFile(t *testing.T) {
 			}
 			defer os.Remove(tmpFile.Name())
 
-			tmpFile.WriteString(`{"test":"profile"}`)
+			if _, err := tmpFile.WriteString(`{"test":"profile"}`); err != nil {
+				t.Errorf("Failed to write to temp file: %v", err)
+			}
 			tmpFile.Close()
 
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -285,7 +290,9 @@ func TestInsecureClient_ImportProfilesFromFile(t *testing.T) {
 				}
 
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -349,7 +356,9 @@ func TestInsecureClient_BulkInstallConnector(t *testing.T) {
 				}
 
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 			defer server.Close()
 
@@ -383,13 +392,19 @@ func TestInsecureClient_VAOperations(t *testing.T) {
 		switch r.URL.Path {
 		case "/restAPI/datasource":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"ds-123","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"ds-123","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/va/config":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"config-456","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"config-456","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/notifications":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"notif-789","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"notif-789","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -444,7 +459,9 @@ func TestInsecureClient_AWSSecretsManagerOperations(t *testing.T) {
 		switch r.Method {
 		case "POST":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"message":"created"}`))
+			if _, err := w.Write([]byte(`{"message":"created"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "GET":
 			// GetAWSSecretsManager calls GetAllAWSSecretsManagerConfigs which expects an array
 			w.WriteHeader(http.StatusOK)
@@ -461,13 +478,19 @@ func TestInsecureClient_AWSSecretsManagerOperations(t *testing.T) {
 					"secretsManager":              true,
 				},
 			}
-			json.NewEncoder(w).Encode(response)
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Errorf("Failed to encode response: %v", err)
+			}
 		case "PUT":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"message":"updated"}`))
+			if _, err := w.Write([]byte(`{"message":"updated"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "DELETE":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"message":"deleted"}`))
+			if _, err := w.Write([]byte(`{"message":"deleted"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		}
 	}))
 	defer server.Close()
@@ -600,9 +623,7 @@ func TestInsecureClient_TLSHandshakeFailure(t *testing.T) {
 
 	// This will fail to start, which is expected
 	defer func() {
-		if r := recover(); r != nil {
-			// Expected to fail
-		}
+		_ = recover() // Explicitly ignore panic recovery
 	}()
 
 	// Even with invalid TLS config, InsecureClient should be created
@@ -622,7 +643,9 @@ func TestInsecureClient_CertificateValidation(t *testing.T) {
 	// Create server with self-signed cert
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"access_token":"test-token"}`))
+		if _, err := w.Write([]byte(`{"access_token":"test-token"}`)); err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -701,10 +724,14 @@ func TestInsecureClient_SharedTokenUsage(t *testing.T) {
 		switch r.URL.Path {
 		case "/oauth/token":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"access_token":"` + sharedToken + `"}`))
+			if _, err := w.Write([]byte(`{"access_token":"` + sharedToken + `"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/datasource", "/restAPI/bulkInstall":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		default:
 			w.WriteHeader(http.StatusOK)
 		}
