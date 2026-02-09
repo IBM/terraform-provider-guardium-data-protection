@@ -625,5 +625,3 @@ func TestSecureClient_ErrorHandling(t *testing.T) {
 		}
 	})
 }
-
-// Made with Bob
