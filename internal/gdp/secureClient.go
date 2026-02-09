@@ -175,5 +175,3 @@ func (s *SecureClient) ConfigureVANotifications(ctx context.Context, accessToken
 
 	return s.Client.ConfigureVANotifications(ctx, secureClient, accessToken, payload)
 }
-
-// Made with Bob
