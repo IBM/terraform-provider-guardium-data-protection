@@ -143,21 +143,22 @@ func TestNewSecureClient(t *testing.T) {
 
 			if secureClient == nil {
 				t.Fatal("Expected SecureClient to be created, got nil")
+				return
 			}
 
 			// Verify Host is preserved
-			if secureClient.Client.Host != tc.host {
-				t.Errorf("Expected Host to be %s, got %s", tc.host, secureClient.Client.Host)
+			if secureClient.Host != tc.host {
+				t.Errorf("Expected Host to be %s, got %s", tc.host, secureClient.Host)
 			}
 
 			// Verify port is preserved
-			if secureClient.Client.port != tc.port {
-				t.Errorf("Expected port to be %s, got %s", tc.port, secureClient.Client.port)
+			if secureClient.port != tc.port {
+				t.Errorf("Expected port to be %s, got %s", tc.port, secureClient.port)
 			}
 
 			// Verify protocol is always https
-			if secureClient.Client.protocol != tc.expectedProtocol {
-				t.Errorf("Expected protocol to be %s, got %s", tc.expectedProtocol, secureClient.Client.protocol)
+			if secureClient.protocol != tc.expectedProtocol {
+				t.Errorf("Expected protocol to be %s, got %s", tc.expectedProtocol, secureClient.protocol)
 			}
 
 			// Verify CA cert path is set
@@ -207,8 +208,8 @@ func TestSecureClient_ProtocolEnforcement(t *testing.T) {
 				t.Fatalf("Failed to create secure client: %v", err)
 			}
 
-			if secureClient.Client.protocol != tc.expectedProtocol {
-				t.Errorf("Expected protocol to be %s, got %s", tc.expectedProtocol, secureClient.Client.protocol)
+			if secureClient.protocol != tc.expectedProtocol {
+				t.Errorf("Expected protocol to be %s, got %s", tc.expectedProtocol, secureClient.protocol)
 			}
 		})
 	}
@@ -253,7 +254,9 @@ func TestSecureClient_CertificateValidation(t *testing.T) {
 	// Create test server with our certificate
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"access_token":"test-token"}`))
+		if _, err := w.Write([]byte(`{"access_token":"test-token"}`)); err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
 	}))
 
 	server.TLS = &tls.Config{
@@ -323,7 +326,9 @@ MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF0K3j8v8rR0Jx8nQJc8pjZJ0Z3VS
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
-			tmpFile.WriteString(tc.certContent)
+			if _, err := tmpFile.WriteString(tc.certContent); err != nil {
+				t.Errorf("Failed to write to temp file: %v", err)
+			}
 			tmpFile.Close()
 
 			baseClient := NewClient("localhost", "8443")
@@ -387,7 +392,7 @@ func TestSecureClient_GenerateAccessToken(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create server certificate
-			serverCert, _ := createServerCert(t, caCert, caKey)
+			serverCert := createServerCert(t, caCert, caKey)
 
 			server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if !strings.Contains(r.URL.Path, "/oauth/token") {
@@ -395,7 +400,9 @@ func TestSecureClient_GenerateAccessToken(t *testing.T) {
 				}
 
 				w.WriteHeader(tc.serverStatus)
-				w.Write([]byte(tc.serverResponse))
+				if _, err := w.Write([]byte(tc.serverResponse)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}))
 
 			server.TLS = &tls.Config{
@@ -438,7 +445,7 @@ func TestSecureClient_GenerateAccessToken(t *testing.T) {
 // These keys are generated dynamically at test runtime and never stored or used
 // for real authentication. They exist only in memory during test execution.
 // GitGuardian: This is a test helper that generates temporary keys, not a secret leak.
-func createServerCert(t *testing.T, caCert *x509.Certificate, caKey *rsa.PrivateKey) (*tls.Certificate, *rsa.PrivateKey) {
+func createServerCert(t *testing.T, caCert *x509.Certificate, caKey *rsa.PrivateKey) *tls.Certificate {
 	serverCert := &x509.Certificate{
 		SerialNumber: big.NewInt(2),
 		Subject: pkix.Name{
@@ -469,28 +476,36 @@ func createServerCert(t *testing.T, caCert *x509.Certificate, caKey *rsa.Private
 		PrivateKey:  serverKey,
 	}
 
-	return tlsCert, serverKey
+	return tlsCert
 }
 
 // TestSecureClient_AllOperations tests all SecureClient operations
 func TestSecureClient_AllOperations(t *testing.T) {
 	caCertPath, caCert, caKey := createTestCACert(t)
-	serverCert, _ := createServerCert(t, caCert, caKey)
+	serverCert := createServerCert(t, caCert, caKey)
 
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/restAPI/datasource":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"ds-123","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"ds-123","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/va/config":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"config-456","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"config-456","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/notifications":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"id":"notif-789","message":"success"}`))
+			if _, err := w.Write([]byte(`{"id":"notif-789","message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/bulkInstall":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"ID":"install-123","Message":"success"}`))
+			if _, err := w.Write([]byte(`{"ID":"install-123","Message":"success"}`)); err != nil {
+				t.Errorf("Failed to write response: %v", err)
+			}
 		case "/restAPI/aws_secrets_manager":
 			if r.Method == "GET" {
 				response := []map[string]interface{}{
@@ -506,10 +521,14 @@ func TestSecureClient_AllOperations(t *testing.T) {
 						"secretsManager":              true,
 					},
 				}
-				json.NewEncoder(w).Encode(response)
+				if err := json.NewEncoder(w).Encode(response); err != nil {
+					t.Errorf("Failed to encode response: %v", err)
+				}
 			} else {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"message":"success"}`))
+				if _, err := w.Write([]byte(`{"message":"success"}`)); err != nil {
+					t.Errorf("Failed to write response: %v", err)
+				}
 			}
 		default:
 			w.WriteHeader(http.StatusOK)
@@ -607,4 +626,3 @@ func TestSecureClient_ErrorHandling(t *testing.T) {
 	})
 }
 
-// Made with Bob
