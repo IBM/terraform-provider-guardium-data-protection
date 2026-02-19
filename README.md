@@ -41,6 +41,39 @@ go run test/main.go
 - Navigate to `cd examples/data-sources/authentication_example/`
 - Run `terraform plan` and see mock access token output
 
+## Testing
+
+### Running Unit Tests
+
+Run all unit tests with coverage:
+```shell
+make test
+```
+
+Or run tests manually:
+```shell
+go test -v -cover -timeout=120s -parallel=10 ./...
+```
+
+### Running Acceptance Tests
+
+Acceptance tests require a real Guardium Data Protection instance:
+```shell
+make testacc
+```
+
+### Test Coverage
+
+The provider includes comprehensive unit tests for:
+- **Provider Configuration**: Metadata, schema validation, and configuration processing
+- **Resources**: All 6 resource types (ImportProfiles, InstallConnector, RegisterVADatasource, ConfigureVADatasource, ConfigureVANotifications, AWSSecretsManager)
+- **Data Sources**: Authentication data source
+- **Client Operations**: Token generation, API calls, error handling
+
+Current test coverage:
+- Provider package: 3.7% of statements
+- GDP client package: 41.9% of statements
+
 ## Publishing The Provider
 
 ### Prerequisites
