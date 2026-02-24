@@ -625,4 +625,3 @@ func TestSecureClient_ErrorHandling(t *testing.T) {
 		}
 	})
 }
-
