@@ -1,10 +1,12 @@
 module github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection
 
-go 1.23.7
+go 1.24.0
+
+toolchain go1.24.12
 
 require (
 	github.com/hashicorp/terraform-plugin-framework v1.15.1
-	github.com/hashicorp/terraform-plugin-log v0.9.0
+	github.com/hashicorp/terraform-plugin-log v0.10.0
 )
 
 require (
