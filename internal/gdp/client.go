@@ -318,9 +318,11 @@ func (c *Client) BulkInstallConnector(ctx context.Context, httpClient *http.Clie
 
 // RegisterDatasourceResponse represents the response from the API
 type RegisterDatasourceResponse struct {
-	ID      string `json:"id,omitempty"`
-	Message string `json:"message,omitempty"`
-	Error   string `json:"error,omitempty"`
+	ID           string `json:"id,omitempty"`
+	Message      string `json:"message,omitempty"`
+	Error        string `json:"error,omitempty"`
+	ErrorCode    string `json:"ErrorCode,omitempty"`
+	ErrorMessage string `json:"ErrorMessage,omitempty"`
 }
 
 func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Client, accessToken string, payload []byte) error {
@@ -364,20 +366,39 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 	}
 	defer res.Body.Close()
 
-	// Parse the response
-	var apiResp RegisterDatasourceResponse
+	// Read the response body
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Could not parse response: %s. Body %s", err, string(body)))
+		tflog.Error(ctx, fmt.Sprintf("Could not read response body: %s", err))
 		return err
 	}
 	tflog.Debug(ctx, "register data source response "+string(body))
 
-	// Check for errors
+	// Parse the response to check for errors
+	var apiResp RegisterDatasourceResponse
+	if err := json.Unmarshal(body, &apiResp); err != nil {
+		tflog.Error(ctx, fmt.Sprintf("Could not parse response JSON: %s. Body: %s", err, string(body)))
+		return fmt.Errorf("failed to parse API response: %w", err)
+	}
+
+	// Check for HTTP status code errors
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusCreated {
 		tflog.Error(ctx, fmt.Sprintf("Status code: %d, Error: %s, Message: %s", res.StatusCode, apiResp.Error, apiResp.Message))
-		return err
+		return fmt.Errorf("API returned status code %d: %s - %s", res.StatusCode, apiResp.Error, apiResp.Message)
 	}
+
+	// Check for application-level errors in the response body
+	if apiResp.ErrorCode != "" || apiResp.ErrorMessage != "" {
+		tflog.Error(ctx, fmt.Sprintf("API Error - Code: %s, Message: %s", apiResp.ErrorCode, apiResp.ErrorMessage))
+		return fmt.Errorf("API error (code %s): %s", apiResp.ErrorCode, apiResp.ErrorMessage)
+	}
+
+	// Also check legacy error fields
+	if apiResp.Error != "" {
+		tflog.Error(ctx, fmt.Sprintf("API Error: %s, Message: %s", apiResp.Error, apiResp.Message))
+		return fmt.Errorf("API error: %s - %s", apiResp.Error, apiResp.Message)
+	}
+
 	return nil
 }
 
