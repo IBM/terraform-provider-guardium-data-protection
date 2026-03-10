@@ -95,8 +95,10 @@ type ImportProfilesFromFileRequest struct {
 }
 
 type ImportProfilesFromFileResponse struct {
-	ID      string `json:"ID"`
-	Message string `json:"Message"`
+	ID           string `json:"ID"`
+	Message      string `json:"Message"`
+	ErrorCode    string `json:"ErrorCode"`
+	ErrorMessage string `json:"ErrorMessage"`
 }
 
 // ImportProfilesFromFile imports profiles from a local file using multipart/form-data upload
@@ -203,6 +205,11 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 
 	tflog.Debug(ctx, "sent request to import profiles from file response "+string(responseBody))
 
+	// Check for ErrorCode and ErrorMessage fields (API returns HTTP 200 even for errors)
+	if apiResponse.ErrorCode != "" && apiResponse.ErrorCode != "0" {
+		return fmt.Errorf("import profiles failed with error code %s: %s", apiResponse.ErrorCode, apiResponse.ErrorMessage)
+	}
+
 	// Check if the Message field contains an error
 	if apiResponse.Message != "" && containsErrorKeywords(apiResponse.Message) {
 		return fmt.Errorf("import profiles failed: %s", apiResponse.Message)
@@ -245,8 +252,10 @@ var (
 )
 
 type bulkInstallConnectorResponse struct {
-	ID      string `json:"ID"`
-	Message string `json:"Message"`
+	ID           string `json:"ID"`
+	Message      string `json:"Message"`
+	ErrorCode    string `json:"ErrorCode"`
+	ErrorMessage string `json:"ErrorMessage"`
 }
 
 // BulkInstallConnector installs connectors in bulk
@@ -299,6 +308,11 @@ func (c *Client) BulkInstallConnector(ctx context.Context, httpClient *http.Clie
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
+	}
+
+	// Check for ErrorCode and ErrorMessage fields (API returns HTTP 200 even for errors)
+	if parsedBody.ErrorCode != "" && parsedBody.ErrorCode != "0" {
+		return fmt.Errorf("bulk install failed with error code %s: %s", parsedBody.ErrorCode, parsedBody.ErrorMessage)
 	}
 
 	// Check for known error messages in the predefined map
