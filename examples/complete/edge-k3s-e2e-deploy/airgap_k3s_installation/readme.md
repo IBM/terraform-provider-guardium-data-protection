@@ -1,0 +1,1 @@
+Put rook ceph installation files in this directory for airgap installation
