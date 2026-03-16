@@ -1,0 +1,251 @@
+# Complete OCP Fyre Edge Deployment - Example Configuration (Consolidated Provider Edition)
+# Copy this file to terraform.tfvars and fill in your values
+#
+# This configuration uses the consolidated gdp-edge provider for all resources.
+
+# ============================================================================
+# Deployment Control
+# ============================================================================
+
+# Set to true to deploy NEW OpenShift cluster via Fyre (requires fyre_username and fyre_api_key)
+# Default is false - uses existing cluster
+# deploy_openshift = false
+
+# Set to true to allow Terraform to manage OpenShift cluster (only when deploy_openshift=true)
+# Default is false - keeps existing cluster unmanaged
+# manage_openshift = false
+
+# ============================================================================
+# Fyre API Credentials (REQUIRED)
+# ============================================================================
+
+fyre_username = "your-fyre-username"
+fyre_api_key  = "your-fyre-api-key"
+
+# ============================================================================
+# OCP Cluster Configuration
+# ============================================================================
+
+cluster_name        = "edge-ocp-cluster"
+cluster_description = "Complete OCP Fyre Edge Deployment"
+
+# OpenShift version: 4.16.x, 4.17.x, 4.18.x, 4.19.x, 4.20.x etc.
+ocp_version = "4.18.28"
+
+# Platform type: "x" (x86), "p" (Power), "z" (Z Systems)
+ocp_platform = "x"
+
+# Fyre site location: "svl", "rtp", "pok"
+site = "svl"
+
+# Enable FIPS mode
+fips_enabled = false
+
+# SSH public key for cluster access (optional)
+# ssh_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."
+
+# ============================================================================
+# Quota Configuration
+# ============================================================================
+
+quota_type       = "product_group"
+product_group_id = "180"
+time_to_live     = "36"
+
+# ============================================================================
+# Master Node Configuration
+# ============================================================================
+
+master_node_count  = 3
+master_node_cpu    = 8
+master_node_memory = 16
+
+# Additional disks for master nodes in GB (optional)
+# master_additional_disks = []
+
+# ============================================================================
+# Worker Node Configuration
+# ============================================================================
+
+worker_node_count       = 3
+worker_node_cpu         = 16
+worker_node_memory      = 64
+worker_additional_disks = [1000]
+
+# ============================================================================
+# Cluster Provisioning Options
+# ============================================================================
+
+wait_for_cluster         = true
+polling_timeout_minutes  = 120  # 30-240 minutes
+polling_interval_seconds = 60   # 30-300 seconds
+
+# ============================================================================
+# OCP Access Configuration (Required for Rook-Ceph and Edge)
+# ============================================================================
+
+# OCP infrastructure node hostname (auto-constructed as {cluster_name}-inf.fyre.ibm.com when deploying)
+# Required if deploy_openshift=false and also required when ocp infra node hostname is in different format:
+# ocp_infra_node_hostname = "edge-ocp-cluster-inf.fyre.ibm.com"
+
+# SSH credentials for OCP nodes
+# ocp_ssh_user     = "core"
+# ocp_ssh_password = "cluster-admin-password"
+
+# OCP admin credentials for Edge deployment (native OAuth - no oc login needed)
+#
+# When deploy_openshift=true (Fyre-provisioned cluster):
+#   The kubeadmin password is automatically fetched from the Fyre API via
+#   the fyre_ocp resource output. No need to set ocp_admin_password.
+#
+# When deploy_openshift=false (existing/external OCP cluster):
+#   You must provide credentials manually using one of the options below.
+#
+# Option A: Username/Password authentication
+# ocp_admin_user     = "kubeadmin"       # Default: "kubeadmin"
+# ocp_admin_password = "your-admin-password"
+#
+# Option B: Token authentication (alternative to username/password)
+# ocp_token = "sha256~your-token-here"  # Get via: oc whoami -t
+
+# Skip TLS verification for self-signed certs (default: true)
+ocp_insecure_skip_verify = true
+
+# ============================================================================
+# SSH Connection Options
+# ============================================================================
+
+# ssh_options = {
+#   connect_timeout       = 30
+#   server_alive_interval = 10
+#   server_alive_count    = 3
+# }
+
+# ============================================================================
+# Rook-Ceph Storage Configuration (Optional)
+# ============================================================================
+
+manage_rook_ceph  = true  # Set to false to keep existing Rook-Ceph unmanaged by Terraform when install_rook_ceph is set to false. Set to true to install Rook-Ceph storage (only if install_rook_ceph=true)
+install_rook_ceph = true  # Set to true to install Rook-Ceph storage (only if manage_rook_ceph=true)
+
+rook_ceph_version           = "v1.15.4"
+rook_ceph_installation_path = ""    # Path to local Rook-Ceph installation files
+rook_ceph_airgap_install    = true
+
+rook_ceph_config = {
+  set_as_default_storage = false
+  pod_wait_timeout       = "600s"
+  sleep_between_steps    = 60
+}
+
+# ============================================================================
+# Edge Deployment Configuration (Optional)
+# ============================================================================
+
+install_edge = false
+manage_edge  = true  # Set to false to keep existing Edge unmanaged by Terraform (skips edge cleanup on destroy)
+
+# Option 1: Download bundle from Guardium Insights CM
+edge_name        = "my-edge"
+edge_cm_url      = "https://gi-cm.example.com"
+edge_oauth_token = "your-oauth-token"
+
+# Option 2: Use local bundle directory
+# edge_bundle_directory = "/path/to/local/edge-bundle"
+
+# Edge monitoring configuration
+edge_monitor_max_attempts   = 180  # ~30 min with 10s interval
+edge_monitor_sleep_interval = 10
+
+# Edge cleanup
+edge_cleanup_bundle = true
+
+# Set to true when using an external image registry (e.g. Docker Hub, Quay) instead of the CM private registry
+# Skips registry certificate installation on cluster nodes
+# external_image_registry = false
+
+# ============================================================================
+# Destroy Timeouts (optional - override defaults of "2h")
+# ============================================================================
+# fyre_ocp_delete_timeout  = "2h"
+# rook_ceph_delete_timeout = "2h"
+# edge_delete_timeout      = "2h"
+
+# ============================================================================
+# Example 1: OCP Cluster Only (No Storage or Edge)
+# ============================================================================
+# cluster_name      = "ocp-basic"
+# ocp_version       = "4.18.28"
+# master_node_count = 3
+# worker_node_count = 3
+# wait_for_cluster  = true
+
+# ============================================================================
+# Example 2: OCP with Rook-Ceph Storage
+# ============================================================================
+# cluster_name             = "ocp-with-storage"
+# ocp_version              = "4.18.28"
+# wait_for_cluster         = true
+# install_rook_ceph        = true
+# rook_ceph_version        = "v1.15.4"
+# ocp_ssh_user             = "core"
+# ocp_ssh_password         = "your-password"
+
+# ============================================================================
+# Example 3: Complete E2E Deployment (OCP + Rook-Ceph + Edge)
+# ============================================================================
+# cluster_name       = "ocp-edge-complete"
+# ocp_version        = "4.18.28"
+# worker_node_count  = 6
+# wait_for_cluster   = true
+# install_rook_ceph  = true
+# ocp_ssh_user       = "core"
+# ocp_ssh_password   = "your-password"
+# install_edge       = true
+# edge_name          = "my-edge"
+# edge_cm_url        = "https://gi-cm.example.com"
+# edge_oauth_token   = "your-oauth-token"
+# Note: ocp_admin_password is auto-fetched from Fyre API when deploy_openshift=true
+
+# ============================================================================
+# Example 4: Quick Burn Cluster (Short-lived)
+# ============================================================================
+# cluster_name = "test-ocp-quick"
+# quota_type   = "quick_burn"
+# time_to_live = "8"
+
+# ============================================================================
+# Example 5: Edge-Only Deployment to Existing OpenShift Cluster
+# ============================================================================
+# manage_openshift         = false  # Keep existing cluster unmanaged
+# deploy_openshift         = false  # Don't create new cluster
+# cluster_name             = "my-existing-ocp"
+# ocp_master_node_hostname = "my-existing-ocp-inf.fyre.ibm.com"
+# ocp_admin_user           = "kubeadmin"             # Required for existing clusters
+# ocp_admin_password       = "your-admin-password"   # Required for existing clusters
+# install_edge             = true
+# edge_name                = "my-edge"
+# edge_cm_url              = "https://gi-cm.example.com"
+# edge_oauth_token         = "your-oauth-token"
+
+# ============================================================================
+# Example 6: Rook-Ceph on Existing OpenShift Cluster
+# ============================================================================
+# manage_openshift            = false  # Keep existing cluster unmanaged
+# deploy_openshift            = false  # Don't create new cluster
+# cluster_name                = "my-existing-ocp"
+# ocp_master_node_hostname    = "existing-ocp-inf.fyre.ibm.com"
+# ocp_ssh_user                = "core"
+# ocp_ssh_password            = "your-password"
+# install_rook_ceph           = true
+# rook_ceph_version           = "v1.15.4"
+# rook_ceph_installation_path = "/path/to/rook-ceph-files"
+
+# ============================================================================
+# Example 7: Cluster-Only Destroy (Skip Rook-Ceph and Edge cleanup)
+# ============================================================================
+# Terraform does not support "create on apply but skip on destroy" via variables.
+# Use -target to destroy only the OCP cluster, leaving Rook-Ceph and Edge untouched:
+#
+#   terraform destroy \
+#     -target=gdp_edge_fyre_ocp.cluster

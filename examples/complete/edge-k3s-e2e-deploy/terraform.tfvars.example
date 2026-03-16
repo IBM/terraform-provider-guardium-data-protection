@@ -1,0 +1,230 @@
+# Complete K3S Deployment - Example Configuration (Custom Provider Edition)
+# Copy this file to terraform.tfvars and fill in your values
+
+# ============================================================================
+# Deployment Control
+# ============================================================================
+
+# Set to true to deploy K3S cluster (default)
+# Set to false to skip K3S deployment and use an existing cluster
+install_k3s= true
+
+# If install_k3s= false, specify existing cluster nodes:
+# external_k3s_nodes       = ["node1.fyre.ibm.com", "node2.fyre.ibm.com"]
+# external_k3s_master_node = "node1.fyre.ibm.com"
+# external_cluster_name    = "my-existing-cluster"
+# external_worker_count    = 3
+
+# ============================================================================
+# REQUIRED: Credentials
+# ============================================================================
+fyre_user_name   = "your-fyre-username"
+fyre_user_apikey = "your-fyre-api-key"
+ssh_password     = "your-fyre-root-password"
+
+# ============================================================================
+# Cluster Configuration
+# ============================================================================
+cluster_name          = "my-k3s-cluster"
+fyre_cluster_type     = "fyre"  # Options: "fyre" or "beta-fyre"
+fyre_product_group_id = "180"   # Options: 180, 413, 676, 310, 746, 691, 455
+
+# ============================================================================
+# Example 1: Single Node K3S Cluster (Default)
+# ============================================================================
+master_nodes = [
+  {
+    name                 = "master1"
+    count                = 1
+    cpu                  = 16
+    memory               = 64
+    os                   = "rhel9"
+    additional_disk_size = 1000
+  }
+]
+
+worker_nodes = []
+
+# ============================================================================
+# Example 2: 3 Worker K3S Cluster (Uncomment to use)
+# ============================================================================
+# master_nodes = [
+#   {
+#     name                 = "master1"
+#     count                = 1
+#     cpu                  = 8
+#     memory               = 16
+#     os                   = "rhel9"
+#     additional_disk_size = 500
+#   }
+# ]
+#
+# worker_nodes = [
+#   {
+#     name                 = "worker1"
+#     count                = 1
+#     cpu                  = 16
+#     memory               = 64
+#     os                   = "rhel9"
+#     additional_disk_size = 1000
+#   },
+#   {
+#     name                 = "worker2"
+#     count                = 1
+#     cpu                  = 16
+#     memory               = 64
+#     os                   = "rhel9"
+#     additional_disk_size = 1000
+#   },
+#   {
+#     name                 = "worker3"
+#     count                = 1
+#     cpu                  = 16
+#     memory               = 64
+#     os                   = "rhel9"
+#     additional_disk_size = 1000
+#   }
+# ]
+
+# ============================================================================
+# Cluster Platform Configuration
+# ============================================================================
+cluster_config = {
+  platform = "x"  # "x" for x86, "z" for z-series
+}
+
+# Network Configuration
+network_config = {
+  public_vlan  = "y"
+  private_vlan = "y"
+  dns          = ""
+}
+
+# VM Polling Configuration
+polling_timeout_minutes  = 60
+polling_interval_seconds = 30
+
+# ============================================================================
+# K3S Configuration
+# ============================================================================
+k3s_version = "v1.32.3"  # Options: v1.32.3, v1.33.1, etc.
+k3s_token   = "edge1234" # Cluster authentication token
+
+k3s_install_options = {
+  disable_traefik   = true    # Disable Traefik ingress controller
+  taint_masters     = true    # Taint master nodes (NoSchedule)
+  node_wait_timeout = "600s"  # Node readiness timeout
+}
+
+# Airgap installation (uses local binaries instead of downloading from internet)
+k3s_airgap_install       = true
+airgap_installation_path = ""  # Path to local K3S airgap binaries
+
+# ============================================================================
+# SSH Configuration (Optional)
+# ============================================================================
+# ssh_user = "root"
+#
+# ssh_options = {
+#   connect_timeout       = 30  # SSH connection timeout in seconds
+#   server_alive_interval = 10  # Interval for keepalive messages
+#   server_alive_count    = 3   # Number of keepalive messages before disconnect
+# }
+
+# ============================================================================
+# Rook-Ceph Storage Configuration (Optional)
+# ============================================================================
+manage_rook_ceph  = true  # Set to false to keep existing Rook-Ceph unmanaged by Terraform when install_rook_ceph is set to false. Set to true to install Rook-Ceph storage (only if install_rook_ceph=true)
+install_rook_ceph = true  # Set to true to install Rook-Ceph storage (only if manage_rook_ceph=true)
+
+
+rook_ceph_version           = "v1.15.4"
+# When airgap_install = false: Leave empty to download from GitHub
+# When airgap_install = true: Provide path to local Rook-Ceph installation files
+rook_ceph_airgap_installation_path = ""
+rook_ceph_airgap_install    = false  # false = download from GitHub, true = use local files
+
+rook_ceph_config = {
+  set_as_default_storage = true   # Set Rook-Ceph as default storage class
+  disable_local_path     = true   # Disable K3S local-path storage
+  pod_wait_timeout       = "600s" # Timeout for pod readiness
+  sleep_between_steps    = 60     # Sleep time between installation steps
+}
+
+# ============================================================================
+# Edge Deployment Configuration (Optional)
+# ============================================================================
+install_edge = false  # Set to true to install Edge components
+manage_edge  = true  # Set to false to keep existing Edge unmanaged by Terraform (skips edge cleanup on destroy)
+
+# Option 1: Download bundle from Guardium Insights CM
+edge_name        = "my-edge-cluster"
+edge_cm_url      = "https://guardium-insights.example.com"
+edge_oauth_token = "your-oauth-token-here"
+
+# Option 2: Use local bundle directory (uncomment to use)
+# edge_bundle_directory = "/path/to/local/edge-bundle"
+
+# Edge monitoring configuration
+edge_monitor_max_attempts   = 180  # ~30 min with 10s interval
+edge_monitor_sleep_interval = 10
+
+# Edge cleanup configuration
+edge_cleanup_bundle = true  # Cleanup downloaded bundle on destroy
+
+# Set to true when using an external image registry (e.g. Docker Hub, Quay) instead of the CM private registry
+# Skips registry certificate installation on cluster nodes
+# external_image_registry = false
+
+# ============================================================================
+# Destroy Timeouts (optional - override defaults of "2h")
+# ============================================================================
+# fyre_vm_delete_timeout   = "2h"
+# k3s_delete_timeout       = "2h"
+# rook_ceph_delete_timeout = "2h"
+# edge_delete_timeout      = "2h"
+
+# ============================================================================
+# Example 3: Edge-Only Deployment to Existing K3S Cluster
+# ============================================================================
+# install_k3s              = false
+# external_k3s_nodes       = ["existing-node1.fyre.ibm.com", "existing-node2.fyre.ibm.com"]
+# external_k3s_master_node = "existing-node1.fyre.ibm.com"
+# ssh_password             = "your-ssh-password"
+# install_edge             = true
+# edge_name                = "my-edge"
+# edge_cm_url              = "https://guardium-insights.example.com"
+# edge_oauth_token         = "your-oauth-token"
+
+# ============================================================================
+# Example 4: Rook-Ceph Installation on Existing K3S Cluster
+# ============================================================================
+# install_k3s                 = false
+# external_cluster_name       = "my-existing-cluster"
+# external_k3s_master_node    = "existing-master.fyre.ibm.com"
+# external_worker_count       = 3
+# ssh_password                = "your-ssh-password"
+# install_rook_ceph           = true
+# rook_ceph_version           = "v1.15.4"
+# rook_ceph_installation_path = "/path/to/rook-ceph-files"
+
+# ============================================================================
+# Example 5: Complete Stack (VMs + K3S + Rook-Ceph + Edge)
+# ============================================================================
+# install_k3s       = true
+# cluster_name      = "full-stack"
+# install_rook_ceph = true
+# install_edge      = true
+# edge_name         = "my-edge"
+# edge_cm_url       = "https://guardium-insights.example.com"
+# edge_oauth_token  = "your-oauth-token"
+
+# ============================================================================
+# Example 6: Cluster-Only Destroy (Skip Rook-Ceph and Edge cleanup)
+# ============================================================================
+# Terraform does not support "create on apply but skip on destroy" via variables.
+# Use -target to destroy only the K3S cluster, leaving Rook-Ceph and Edge untouched:
+#
+#   terraform destroy \
+#     -target=fyre_vm.cluster \
+#     -target=k3s_cluster.main
