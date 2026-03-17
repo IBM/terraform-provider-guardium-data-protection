@@ -1,68 +1,14 @@
-# Complete K3S Deployment Variables - Custom Provider Edition
-# Uses custom Terraform providers (fyre, k3s, rook-ceph, gdp-edge)
+# Complete K3S Edge Deployment Variables
+# Deploys K3S, Rook-Ceph, and Edge components to existing clusters
 
 # ============================================================================
 # Deployment Control
 # ============================================================================
 
-variable "create_fyre_vm" {
-  description = "Whether to create Fyre VMs (set to false to skip VM creation and use existing VMs)"
-  type        = bool
-  default     = false
-}
-
 variable "install_k3s" {
   description = "Whether to deploy K3S cluster (set to false to use existing cluster)"
   type        = bool
   default     = true
-}
-
-variable "manage_k3s" {
-  description = "Whether to manage K3S with Terraform (set to false to keep existing cluster unmanaged when install_k3s is set to false)"
-  type        = bool
-  default     = true
-}
-
-variable "external_k3s_nodes" {
-  description = "List of external K3S node hostnames (required if install_k3s=false)"
-  type        = list(string)
-  default     = []
-}
-
-variable "external_k3s_master_node" {
-  description = "External K3S master node hostname (required if install_k3s=false)"
-  type        = string
-  default     = ""
-}
-
-variable "external_cluster_name" {
-  description = "External cluster name (required if install_k3s=false and install_rook_ceph=true)"
-  type        = string
-  default     = ""
-}
-
-variable "external_worker_count" {
-  description = "Number of worker nodes in external cluster (required if install_k3s=false and install_rook_ceph=true)"
-  type        = number
-  default     = 0
-}
-
-# ============================================================================
-# Fyre Credentials
-# ============================================================================
-
-variable "fyre_user_name" {
-  description = "Fyre username for authentication"
-  type        = string
-  default     = ""
-  sensitive   = true
-}
-
-variable "fyre_user_apikey" {
-  description = "Fyre API key for authentication"
-  type        = string
-  default     = ""
-  sensitive   = true
 }
 
 # ============================================================================
@@ -76,7 +22,7 @@ variable "ssh_user" {
 }
 
 variable "ssh_password" {
-  description = "SSH password for root user on Fyre VMs"
+  description = "SSH password for connecting to nodes"
   type        = string
   default     = ""
   sensitive   = true
@@ -97,9 +43,9 @@ variable "ssh_options" {
 # ============================================================================
 
 variable "cluster_name" {
-  description = "Unique name for the Fyre cluster"
+  description = "Name for the K3S cluster"
   type        = string
-  default     = "qb-test"
+  default     = "k3s-cluster"
 
   validation {
     condition     = length(var.cluster_name) > 0
@@ -107,101 +53,26 @@ variable "cluster_name" {
   }
 }
 
-variable "fyre_cluster_type" {
-  description = "Fyre platform type (fyre or beta-fyre)"
-  type        = string
-  default     = "fyre"
+variable "k3s_nodes" {
+  description = "List of K3S node hostnames (first node is treated as master)"
+  type        = list(string)
+  default     = []
 
   validation {
-    condition     = contains(["fyre", "beta-fyre"], var.fyre_cluster_type)
-    error_message = "Cluster type must be either 'fyre' or 'beta-fyre'."
+    condition     = length(var.k3s_nodes) > 0
+    error_message = "At least one K3S node must be specified."
   }
 }
 
-variable "fyre_product_group_id" {
-  description = "Fyre product group ID - ensure you have quota in this group"
+variable "k3s_master_node" {
+  description = "K3S master node hostname (typically the first node in k3s_nodes)"
   type        = string
-  default     = "180"
+  default     = ""
 
   validation {
-    condition     = contains(["180", "413", "676", "310", "746", "691", "455"], var.fyre_product_group_id)
-    error_message = "Product group ID must be one of: 180, 413, 676, 310, 746, 691, 455."
+    condition     = length(var.k3s_master_node) > 0
+    error_message = "K3S master node must be specified."
   }
-}
-
-# ============================================================================
-# Node Configuration
-# ============================================================================
-
-variable "master_nodes" {
-  description = "Configuration for master nodes"
-  type = list(object({
-    name                 = string
-    count                = number
-    cpu                  = number
-    memory               = number
-    os                   = string
-    additional_disk_size = number
-  }))
-  default = [
-    {
-      name                 = "master1"
-      count                = 1
-      cpu                  = 16
-      memory               = 64
-      os                   = "rhel9"
-      additional_disk_size = 1000
-    }
-  ]
-}
-
-variable "worker_nodes" {
-  description = "Configuration for worker nodes (empty list for single-node cluster)"
-  type = list(object({
-    name                 = string
-    count                = number
-    cpu                  = number
-    memory               = number
-    os                   = string
-    additional_disk_size = number
-  }))
-  default = []
-}
-
-variable "cluster_config" {
-  description = "General cluster configuration"
-  type = object({
-    platform = string
-  })
-  default = {
-    platform = "x"
-  }
-}
-
-variable "network_config" {
-  description = "Network configuration for nodes"
-  type = object({
-    public_vlan  = string
-    private_vlan = string
-    dns          = string
-  })
-  default = {
-    public_vlan  = "y"
-    private_vlan = "y"
-    dns          = ""
-  }
-}
-
-variable "polling_timeout_minutes" {
-  description = "Maximum time in minutes to wait for VM creation"
-  type        = number
-  default     = 60
-}
-
-variable "polling_interval_seconds" {
-  description = "Interval in seconds between polling attempts for VM creation status"
-  type        = number
-  default     = 30
 }
 
 # ============================================================================
@@ -261,12 +132,6 @@ variable "install_rook_ceph" {
   type        = bool
   default     = false
 }
-variable "manage_rook_ceph" {
-  description = "Whether to manage Rook-Ceph with Terraform (set to false to keep existing installation unmanaged)"
-  type        = bool
-  default     = true
-}
-
 
 variable "rook_ceph_version" {
   description = "Rook-Ceph version to install"
@@ -307,91 +172,73 @@ variable "install_edge" {
   default     = false
 }
 
-variable "manage_edge" {
-  description = "Whether to manage Edge deployment with Terraform (set to false to keep existing installation unmanaged during destroy)"
-  type        = bool
-  default     = true
-}
-
 variable "edge_name" {
-  description = "Name of the edge to deploy (required if downloading bundle from CM)"
-  type        = string
-  default     = ""
-}
-
-variable "edge_bundle_directory" {
-  description = "Path to local edge bundle directory. If empty, bundle will be downloaded from CM."
-  type        = string
-  default     = ""
-}
-
-variable "platform" {
-  description = "Edge deploy target platform"
+  description = "Name for the Edge deployment"
   type        = string
   default     = ""
 }
 
 variable "edge_cm_url" {
-  description = "Guardium Insights Central Manager URL"
+  description = "URL of the Guardium Insights Central Manager (for downloading edge bundle)"
   type        = string
   default     = ""
 }
 
 variable "edge_oauth_token" {
-  description = "OAuth token for CM authentication"
+  description = "OAuth token for authenticating with Central Manager"
   type        = string
   default     = ""
   sensitive   = true
 }
 
+variable "edge_bundle_directory" {
+  description = "Local path to edge bundle directory (alternative to downloading from CM)"
+  type        = string
+  default     = ""
+}
+
 variable "edge_monitor_max_attempts" {
-  description = "Maximum polling attempts for edge deployment monitoring (default: 180 = ~30 min with 10s interval)"
+  description = "Maximum number of attempts to monitor edge deployment status"
   type        = number
-  default     = 180
+  default     = 60
 }
 
 variable "edge_monitor_sleep_interval" {
-  description = "Sleep interval in seconds between edge monitoring polls"
+  description = "Sleep interval in seconds between edge deployment status checks"
   type        = number
-  default     = 10
+  default     = 30
 }
 
 variable "edge_cleanup_bundle" {
-  description = "Whether to cleanup downloaded edge bundle on destroy"
+  description = "Whether to cleanup edge bundle after deployment"
   type        = bool
   default     = true
 }
 
 variable "external_image_registry" {
-  description = "Set to true when using an external image registry (e.g. Docker Hub, Quay) instead of the CM private registry. Skips registry certificate installation on cluster nodes."
+  description = "Set to true when using an external image registry (e.g. Docker Hub, Quay) instead of the CM private registry. Skips registry certificate installation."
   type        = bool
   default     = false
 }
 
 # ============================================================================
-# Destroy Timeouts
+# Timeout Configuration
 # ============================================================================
 
-variable "fyre_vm_delete_timeout" {
-  description = "Timeout for destroying the Fyre VM cluster (e.g. '2h', '90m')"
-  type        = string
-  default     = "2h"
-}
-
 variable "k3s_delete_timeout" {
-  description = "Timeout for uninstalling the K3S cluster (e.g. '2h', '90m')"
+  description = "Timeout for K3S cluster deletion"
   type        = string
-  default     = "2h"
+  default     = "30m"
 }
 
 variable "rook_ceph_delete_timeout" {
-  description = "Timeout for uninstalling Rook-Ceph (e.g. '2h', '90m')"
+  description = "Timeout for Rook-Ceph deletion"
   type        = string
-  default     = "2h"
+  default     = "30m"
 }
 
 variable "edge_delete_timeout" {
-  description = "Timeout for deleting the Edge deployment (e.g. '2h', '90m')"
+  description = "Timeout for Edge deployment deletion"
   type        = string
-  default     = "2h"
+  default     = "30m"
 }
