@@ -1,10 +1,10 @@
-# Complete End-to-End OCP Fyre Edge Deployment
+# Complete End-to-End OCP Edge Deployment
 
-This Terraform configuration provides a complete end-to-end deployment solution for OpenShift Container Platform (OCP) on IBM Fyre, with optional Rook-Ceph storage and Edge components. It uses the unified [`terraform-provider-guardium-data-protection`](../../../) provider for all resources.
+This Terraform configuration provides a complete end-to-end deployment solution for OpenShift Container Platform (OCP), with optional Rook-Ceph storage and Edge components. It uses the unified [`terraform-provider-guardium-data-protection`](../../../) provider for all resources.
 
 ## What This Does
 
-1. **Creates OCP cluster on Fyre** via consolidated provider - **OPTIONAL**
+1. **Creates OCP cluster** via consolidated provider - **OPTIONAL**
 2. **Monitors cluster readiness** with configurable polling
 3. **Installs Rook-Ceph storage** via consolidated provider - **OPTIONAL**
 4. **Deploys Edge components** via consolidated provider with native OCP OAuth - **OPTIONAL**
@@ -16,7 +16,7 @@ All in **one `terraform apply` command**!
 
 | Provider | Source | Resources | Purpose |
 |----------|--------|-----------|---------|
-| `ibm/guardium-data-protection` | `registry.terraform.io/ibm/guardium-data-protection` | `guardium-data-protection_fyre_ocp`<br>`guardium-data-protection_rook_ceph_cluster`<br>`guardium-data-protection_deployment` | Unified provider for:<br>- OCP cluster creation<br>- Rook-Ceph storage<br>- Edge deployment |
+| `ibm/guardium-data-protection` | `registry.terraform.io/ibm/guardium-data-protection` | `guardium-data-protection_rook_ceph_cluster`<br>`guardium-data-protection_deployment` | Unified provider for:<br>- Rook-Ceph storage<br>- Edge deployment |
 
 ## Deployment Modes
 
@@ -34,7 +34,7 @@ Skip OpenShift creation and deploy Edge/Rook-Ceph to an existing cluster without
 ```hcl
 manage_openshift        = false  # Don't manage existing cluster
 deploy_openshift        = false  # Don't create new cluster
-ocp_infra_node_hostname = "existing-ocp-inf.fyre.ibm.com"
+ocp_infra_node_hostname = "existing-ocp-inf.example.com"
 install_edge            = true
 ```
 
@@ -59,17 +59,13 @@ This configuration uses a two-variable pattern (similar to Rook-Ceph) to control
 ### 1. Configure
 
 ```bash
-cd core/container/test-suits/terraform/complete-e2e-ocp-fyre-deployment
+cd core/container/test-suits/terraform/complete-e2e-ocp-deployment
 cp terraform.tfvars.example terraform.tfvars
 ```
 
 Edit `terraform.tfvars`:
 
 ```hcl
-# Credentials
-fyre_username = "your-username"
-fyre_api_key  = "your-api-key"
-
 # Cluster
 cluster_name = "my-ocp-cluster"
 ocp_version  = "4.18.28"
@@ -98,7 +94,7 @@ terraform output access_instructions
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  complete-e2e-ocp-fyre-deployment (Consolidated Provider)  │
+│  complete-e2e-ocp-deployment (Consolidated Provider)       │
 └────────────────────────────────────────────────────────────┘
                           │
                           │ gdpedge provider
@@ -107,37 +103,18 @@ terraform output access_instructions
         │                 │                 │
         ▼                 ▼                 ▼
 ┌─────────────────┐ ┌──────────────┐ ┌──────────────┐
-│ gdp_edge_fyre   │─▶│  gdp_edge_   │─▶│  gdp_edge_   │
-│     _ocp        │ │  rook_ceph   │ │  deployment  │
-│   (Optional)    │ │  _cluster    │ │  (Optional)  │
-└─────────────────┘ │  (Optional)  │ └──────────────┘
-        │           └──────────────┘        │
-        ▼                 │                 ▼
-  Create OCP              ▼           Edge Components
-  on Fyre          Storage Layer      (Native OAuth)
+│  gdp_edge_      │─▶│  gdp_edge_   │
+│  rook_ceph      │ │  deployment  │
+│  _cluster       │ │  (Optional)  │
+│  (Optional)     │ └──────────────┘
+└─────────────────┘        │
+        │                  ▼
+        ▼            Edge Components
+  Storage Layer      (Native OAuth)
                    (Rook-Ceph)
 ```
 
 ## Configuration Examples
-
-### Basic OCP Cluster
-
-```hcl
-fyre_username = "your-username"
-fyre_api_key  = "your-api-key"
-cluster_name  = "ocp-basic"
-ocp_version   = "4.18.28"
-
-master_node_count  = 3
-master_node_cpu    = 8
-master_node_memory = 16
-
-worker_node_count  = 3
-worker_node_cpu    = 16
-worker_node_memory = 64
-
-wait_for_cluster = true
-```
 
 ### OCP with Rook-Ceph Storage
 
@@ -163,7 +140,7 @@ rook_ceph_config = {
 
 ```hcl
 # When deploy_openshift=true, the kubeadmin password is automatically
-# fetched from the Fyre API - no need to set ocp_admin_password!
+# fetched - no need to set ocp_admin_password!
 cluster_name      = "ocp-edge-complete"
 worker_node_count = 6
 wait_for_cluster  = true
@@ -191,10 +168,10 @@ edge_oauth_token   = "your-oauth-token"
 manage_openshift         = false  # Keep existing cluster unmanaged
 deploy_openshift         = false  # Don't create new cluster
 cluster_name             = "my-existing-ocp"
-ocp_master_node_hostname = "existing-ocp-inf.fyre.ibm.com"
+ocp_master_node_hostname = "existing-ocp-inf.example.com"
 
 # OCP authentication for Edge provider (native OAuth)
-# Required when deploy_openshift=false since there's no fyre_ocp resource
+# Required when deploy_openshift=false since there's no OCP resource
 # to auto-fetch the kubeadmin password from
 ocp_admin_user     = "kubeadmin"
 ocp_admin_password = "your-admin-password"
@@ -212,7 +189,7 @@ edge_oauth_token = "your-oauth-token"
 manage_openshift            = false  # Keep existing cluster unmanaged
 deploy_openshift            = false  # Don't create new cluster
 cluster_name                = "my-existing-ocp"
-ocp_master_node_hostname    = "existing-ocp-inf.fyre.ibm.com"
+ocp_master_node_hostname    = "existing-ocp-inf.example.com"
 ocp_ssh_user                = "core"
 ocp_ssh_password            = "your-password"
 
@@ -256,7 +233,7 @@ ocp_ssh_user      = "core"
 ocp_ssh_password  = "your-password"
 install_rook_ceph = true
 install_edge      = true
-# Note: ocp_admin_password is auto-fetched from Fyre API when deploy_openshift=true
+# Note: ocp_admin_password is auto-fetched when deploy_openshift=true
 ```
 
 ```bash
@@ -304,7 +281,7 @@ If you want to keep the cluster but stop managing it with Terraform:
 **Option 1: Remove from state first (recommended)**
 ```bash
 # Remove cluster from Terraform state
-terraform state rm gdp_edge_fyre_ocp.cluster[0]
+terraform state rm guardium-data-protection_ocp.cluster[0]
 
 # Update terraform.tfvars
 manage_openshift = false
@@ -328,7 +305,7 @@ Then run `terraform apply`. The cluster resource count becomes 0, but since both
 ## File Structure
 
 ```
-complete-e2e-ocp-fyre-deployment/
+complete-e2e-ocp-deployment/
 ├── main.tf                    # Provider configs + resource definitions
 ├── variables.tf               # All variables
 ├── outputs.tf                 # Combined outputs
