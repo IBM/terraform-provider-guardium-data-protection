@@ -94,9 +94,10 @@ resource "guardium-data-protection_deployment" "edge" {
   ocp_token                = var.ocp_token
   ocp_insecure_skip_verify = var.ocp_insecure_skip_verify
 
-  monitor_max_attempts    = var.edge_monitor_max_attempts
-  monitor_sleep_interval  = var.edge_monitor_sleep_interval
-  cleanup_bundle          = var.edge_cleanup_bundle
-  delete_timeout          = var.edge_delete_timeout
-  external_image_registry = var.external_image_registry
+  monitor_max_attempts       = var.edge_monitor_max_attempts
+  monitor_sleep_interval     = var.edge_monitor_sleep_interval
+  cleanup_bundle             = var.edge_cleanup_bundle
+  delete_timeout             = var.edge_delete_timeout
+  ocp_machineconfig_timeout  = var.ocp_machineconfig_timeout
+  external_image_registry    = var.external_image_registry
 }

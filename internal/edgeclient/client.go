@@ -460,7 +460,7 @@ func (c *Client) InstallCertsK3S(ctx context.Context, workDir string, nodes []st
 }
 
 // InstallCertsOpenShift installs registry certificates on OpenShift cluster
-func (c *Client) InstallCertsOpenShift(ctx context.Context, workDir string, registryHost string) error {
+func (c *Client) InstallCertsOpenShift(ctx context.Context, workDir string, registryHost string, mcTimeout time.Duration) error {
 	certPath := filepath.Join(workDir, ".registry_cert.crt")
 	if _, err := os.Stat(certPath); os.IsNotExist(err) {
 		return nil
@@ -499,7 +499,7 @@ func (c *Client) InstallCertsOpenShift(ctx context.Context, workDir string, regi
 	}
 
 	// Wait for MachineConfigPool to update
-	if err := osClient.WaitForMachineConfigPoolUpdate(ctx, "worker", 30*time.Minute); err != nil {
+	if err := osClient.WaitForMachineConfigPoolUpdate(ctx, "worker", mcTimeout); err != nil {
 		return fmt.Errorf("timeout waiting for machineconfig rollout: %w", err)
 	}
 

@@ -87,11 +87,18 @@ edge_cleanup_bundle = true
 # external_image_registry = false
 
 # ============================================================================
-# Destroy Timeouts (optional - override defaults)
+# Timeout Configuration (optional - override defaults)
 # ============================================================================
 
+# Timeout for Rook-Ceph deletion
 # rook_ceph_delete_timeout = "30m"
-# edge_delete_timeout      = "30m"
+
+# Timeout for Edge deployment deletion
+# edge_delete_timeout = "30m"
+
+# Timeout for OpenShift MachineConfig rollout during certificate installation
+# Increase this for large clusters or slow node updates (default: 30m)
+# ocp_machineconfig_timeout = "30m"  # Examples: "30m", "1h", "2h"
 
 # ============================================================================
 # Example 1: Rook-Ceph Installation on Existing OpenShift Cluster
