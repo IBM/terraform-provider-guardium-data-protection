@@ -215,7 +215,7 @@ func (r *RookCephClusterResource) Configure(ctx context.Context, req resource.Co
 	if unifiedClient.RookCephClient == nil {
 		resp.Diagnostics.AddError(
 			"RookCeph Client Not Configured",
-			fmt.Sprintf("Expected unifiedClient.FyreClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected unifiedClient.RookCephClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}

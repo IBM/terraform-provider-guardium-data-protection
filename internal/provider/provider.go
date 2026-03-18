@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/edgeclient"
-	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/fyreclient"
 	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/gdp"
 	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/k3sclient"
 	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/rookcephclient"
@@ -37,7 +36,6 @@ type GuardiumDataProtectionProvider struct {
 type UnifiedClient struct {
 	GDPClient      *gdp.Client
 	EdgeClient     *edgeclient.Client
-	FyreClient     *fyreclient.Client
 	K3sClient      *k3sclient.Client
 	RookCephClient *rookcephclient.Client
 }
@@ -46,12 +44,6 @@ type guardiumDataProtectionModel struct {
 	// Original GDP fields
 	Host types.String `tfsdk:"host"`
 	Port types.String `tfsdk:"port"`
-
-	// Fyre config
-	FyreUsername       types.String `tfsdk:"fyre_username"`
-	FyreAPIKey         types.String `tfsdk:"fyre_api_key"`
-	FyreClusterType    types.String `tfsdk:"fyre_cluster_type"`
-	FyreProductGroupID types.String `tfsdk:"fyre_product_group_id"`
 
 	// K3s config
 	K3sSSHUser             types.String `tfsdk:"k3s_ssh_user"`
@@ -106,25 +98,6 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 			},
 			"port": schema.StringAttribute{
 				MarkdownDescription: "The Guardium Data Protection port",
-				Optional:            true,
-			},
-
-			// Fyre attributes
-			"fyre_username": schema.StringAttribute{
-				MarkdownDescription: "Fyre username for authentication. Can also be set via FYRE_USERNAME environment variable.",
-				Optional:            true,
-			},
-			"fyre_api_key": schema.StringAttribute{
-				MarkdownDescription: "Fyre API key for authentication. Can also be set via FYRE_API_KEY environment variable.",
-				Optional:            true,
-				Sensitive:           true,
-			},
-			"fyre_cluster_type": schema.StringAttribute{
-				MarkdownDescription: "Type of Fyre cluster: 'beta-fyre' or 'standard-fyre'. Can also be set via FYRE_CLUSTER_TYPE environment variable.",
-				Optional:            true,
-			},
-			"fyre_product_group_id": schema.StringAttribute{
-				MarkdownDescription: "Product group ID for quota management. Can also be set via FYRE_PRODUCT_GROUP_ID environment variable.",
 				Optional:            true,
 			},
 
@@ -332,20 +305,6 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		OCPInsecureSkipVerify: ocpInsecureSkipVerify,
 	})
 
-	// ===== Fyre Client Configuration =====
-	fyreUsername := getStringValue(data.FyreUsername, "FYRE_USERNAME")
-	fyreAPIKey := getStringValue(data.FyreAPIKey, "FYRE_API_KEY")
-	fyreClusterType := getStringValue(data.FyreClusterType, "FYRE_CLUSTER_TYPE")
-	if fyreClusterType == "" {
-		fyreClusterType = "standard-fyre"
-	}
-	fyreProductGroupID := getStringValue(data.FyreProductGroupID, "FYRE_PRODUCT_GROUP_ID")
-
-	var fyreClient *fyreclient.Client
-	if fyreUsername != "" && fyreAPIKey != "" {
-		fyreClient = fyreclient.NewClient(fyreUsername, fyreAPIKey, fyreClusterType, fyreProductGroupID)
-	}
-
 	// ===== K3s Client Configuration =====
 	k3sSSHUser := getStringValue(data.K3sSSHUser, "K3S_SSH_USER")
 	if k3sSSHUser == "" {
@@ -408,7 +367,6 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 	unifiedClient := &UnifiedClient{
 		GDPClient:      gdpClient,
 		EdgeClient:     edgeClient,
-		FyreClient:     fyreClient,
 		K3sClient:      k3sClient,
 		RookCephClient: rookCephClient,
 	}
@@ -429,8 +387,6 @@ func (p *GuardiumDataProtectionProvider) Resources(ctx context.Context) []func()
 		NewAWSSecretsManagerResource,
 		// Edge resources
 		NewEdgeDeploymentResource,
-		NewVMResource,
-		NewOCPResource,
 		NewK3SClusterResource,
 		NewRookCephClusterResource,
 	}
