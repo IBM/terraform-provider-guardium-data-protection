@@ -1,105 +1,27 @@
-# Complete OCP Fyre Edge Deployment Outputs - Consolidated Provider Edition
+# Complete OCP Edge Deployment Outputs
 
 # ============================================================================
-# OCP Cluster Outputs (if deployed)
+# Cluster Outputs
 # ============================================================================
-
-output "cluster_id" {
-  description = "The ID of the OCP cluster"
-  value       = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].id : null
-}
 
 output "cluster_name" {
-  description = "Name of the deployed OCP cluster"
-  value       = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].name : var.cluster_name
+  description = "Name of the OpenShift cluster"
+  value       = var.cluster_name
 }
 
-output "ocp_version" {
-  description = "OpenShift version deployed"
-  value       = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].ocp_version : null
-}
-
-output "platform" {
-  description = "Platform type (x86, Power, or Z)"
-  value       = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].platform : null
-}
-
-output "site" {
-  description = "Fyre site location"
-  value       = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].site : null
-}
-
-output "cluster_url" {
-  description = "URL to access the cluster in Fyre console"
-  value       = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].cluster_url : null
-}
-
-output "ocp_inf_hostname" {
+output "ocp_infra_node_hostname" {
   description = "OCP infrastructure node hostname"
-  value       = local.ocp_inf_hostname
+  value       = var.ocp_infra_node_hostname
 }
 
-output "cluster_summary" {
-  description = "Summary of cluster configuration"
-  value = var.deploy_openshift ? {
-    name        = guardium-data-protection_fyre_ocp.cluster[0].name
-    description = guardium-data-protection_fyre_ocp.cluster[0].description
-    ocp_version = guardium-data-protection_fyre_ocp.cluster[0].ocp_version
-    platform    = guardium-data-protection_fyre_ocp.cluster[0].platform
-    site        = guardium-data-protection_fyre_ocp.cluster[0].site
-    fips        = guardium-data-protection_fyre_ocp.cluster[0].fips
-    cluster_url = guardium-data-protection_fyre_ocp.cluster[0].cluster_url
-    master = {
-      count  = var.master_node_count
-      cpu    = var.master_node_cpu
-      memory = var.master_node_memory
-    }
-    worker = {
-      count  = var.worker_node_count
-      cpu    = var.worker_node_cpu
-      memory = var.worker_node_memory
-    }
-  } : null
+output "ocp_api_server" {
+  description = "OCP API server URL"
+  value       = var.ocp_api_server
 }
 
-output "master_nodes" {
-  description = "Master node configuration"
-  value = {
-    count  = var.master_node_count
-    cpu    = var.master_node_cpu
-    memory = var.master_node_memory
-  }
-}
-
-output "worker_nodes" {
-  description = "Worker node configuration"
-  value = {
-    count  = var.worker_node_count
-    cpu    = var.worker_node_cpu
-    memory = var.worker_node_memory
-  }
-}
-
-output "access_instructions" {
-  description = "Instructions for accessing the cluster"
-  value = var.deploy_openshift ? join("\n", [
-    "OCP Cluster Created Successfully!",
-    "",
-    "  Cluster Name: ${guardium-data-protection_fyre_ocp.cluster[0].name}",
-    "  OCP Version:  ${guardium-data-protection_fyre_ocp.cluster[0].ocp_version}",
-    "  Platform:     ${guardium-data-protection_fyre_ocp.cluster[0].platform}",
-    "  Site:         ${guardium-data-protection_fyre_ocp.cluster[0].site}",
-    "  Inf Node:     ${local.ocp_inf_hostname}",
-    "",
-    "  Access your cluster:",
-    "  1. Visit: ${guardium-data-protection_fyre_ocp.cluster[0].cluster_url}",
-    "  2. Download kubeconfig from Fyre console",
-    "  3. Set KUBECONFIG environment variable",
-    "  4. Run: kubectl get nodes",
-    "",
-    "  Master Nodes: ${var.master_node_count} x ${var.master_node_cpu} CPU, ${var.master_node_memory}GB RAM",
-    "  Worker Nodes: ${var.worker_node_count} x ${var.worker_node_cpu} CPU, ${var.worker_node_memory}GB RAM",
-  ]) : "Using existing cluster: ${var.cluster_name}"
+output "worker_node_count" {
+  description = "Number of worker nodes"
+  value       = var.worker_node_count
 }
 
 # ============================================================================
@@ -107,7 +29,7 @@ output "access_instructions" {
 # ============================================================================
 
 output "rook_ceph_installed" {
-  description = "Whether Rook-Ceph was installed"
+  description = "Whether Rook-Ceph is installed"
   value       = var.install_rook_ceph
 }
 
@@ -122,7 +44,7 @@ output "rook_ceph_namespace" {
 }
 
 output "rook_ceph_cluster_type" {
-  description = "Rook-Ceph cluster type"
+  description = "Rook-Ceph cluster type: test or production"
   value       = var.install_rook_ceph ? guardium-data-protection_rook_ceph_cluster.this[0].cluster_type : null
 }
 
@@ -155,7 +77,7 @@ output "rook_ceph_summary" {
 # ============================================================================
 
 output "edge_installed" {
-  description = "Whether Edge components were installed"
+  description = "Whether Edge is installed"
   value       = var.install_edge
 }
 
@@ -194,79 +116,58 @@ output "edge_summary" {
 }
 
 # ============================================================================
-# Deployment Summary
+# Combined Summary
 # ============================================================================
 
 output "deployment_summary" {
   description = "Complete deployment summary"
   value = {
-    cluster = {
-      name        = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].name : var.cluster_name
-      ocp_version = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].ocp_version : null
-      platform    = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].platform : null
-      site        = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].site : null
-      fips        = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].fips : null
-      inf_node    = local.ocp_inf_hostname
-    }
-    components = {
-      rook_ceph_installed = var.install_rook_ceph
-      rook_ceph_version   = var.install_rook_ceph ? guardium-data-protection_rook_ceph_cluster.this[0].rook_ceph_version : null
-      edge_installed      = var.install_edge
-      edge_name           = var.install_edge ? var.edge_name : null
-      edge_status         = var.install_edge ? guardium-data-protection_deployment.edge[0].deployment_status : null
-    }
-    access = {
-      cluster_url = var.deploy_openshift ? guardium-data-protection_fyre_ocp.cluster[0].cluster_url : null
-      inf_node    = local.ocp_inf_hostname
-      api_server  = local.ocp_api_server
-    }
+    cluster_name   = var.cluster_name
+    inf_node       = var.ocp_infra_node_hostname
+    api_server     = var.ocp_api_server
+    worker_count   = var.worker_node_count
+    rook_ceph      = var.install_rook_ceph
+    edge           = var.install_edge
   }
 }
 
-# ============================================================================
-# Next Steps
-# ============================================================================
+output "access_instructions" {
+  description = "Instructions for accessing the cluster"
+  value = <<-EOT
+    OpenShift Cluster Access:
+
+    1. API Server: ${var.ocp_api_server}
+    2. Infrastructure Node: ${var.ocp_infra_node_hostname}
+    
+    To access the cluster:
+      oc login ${var.ocp_api_server} -u ${var.ocp_admin_user}
+      
+    Or set KUBECONFIG:
+      export KUBECONFIG=/path/to/kubeconfig
+      kubectl get nodes
+  EOT
+}
 
 output "next_steps" {
   description = "Next steps after deployment"
-  value = var.deploy_openshift ? join("\n", [
-    "============================================================",
-    "Deployment Complete!",
-    "============================================================",
-    "",
-    "Cluster: ${guardium-data-protection_fyre_ocp.cluster[0].name}",
-    "OCP Version: ${guardium-data-protection_fyre_ocp.cluster[0].ocp_version}",
-    "Platform: ${guardium-data-protection_fyre_ocp.cluster[0].platform}",
-    "Site: ${guardium-data-protection_fyre_ocp.cluster[0].site}",
-    "Inf Node: ${local.ocp_inf_hostname}",
-    "",
-    "Components Installed:",
-    "- Rook-Ceph Storage: ${var.install_rook_ceph ? "Yes (${var.rook_ceph_version})" : "No"}",
-    "- Edge Components: ${var.install_edge ? "Yes (${var.edge_name})" : "No"}",
-    "",
-    "Next Steps:",
-    "1. Access Fyre Console: ${guardium-data-protection_fyre_ocp.cluster[0].cluster_url}",
-    "2. Download kubeconfig from Fyre interface",
-    "3. Configure kubectl:",
-    "   export KUBECONFIG=/path/to/kubeconfig",
-    "   kubectl get nodes",
-    "",
-    var.install_rook_ceph ? "4. Verify Rook-Ceph:\n   kubectl get pods -n rook-ceph\n   kubectl get storageclass\n" : "",
-    var.install_edge ? "5. Verify Edge Deployment:\n   kubectl get pods -n <edge-namespace>\n   kubectl get all -n <edge-namespace>\n" : "",
-    "============================================================",
-  ]) : join("\n", [
-    "============================================================",
-    "Deployment Complete!",
-    "============================================================",
-    "",
-    "Using Existing Cluster: ${var.cluster_name}",
-    "",
-    "Components Installed:",
-    "- Rook-Ceph Storage: ${var.install_rook_ceph ? "Yes (${var.rook_ceph_version})" : "No"}",
-    "- Edge Components: ${var.install_edge ? "Yes (${var.edge_name})" : "No"}",
-    "",
-    var.install_rook_ceph ? "Verify Rook-Ceph:\n   kubectl get pods -n rook-ceph\n   kubectl get storageclass\n" : "",
-    var.install_edge ? "Verify Edge Deployment:\n   kubectl get pods -n <edge-namespace>\n   kubectl get all -n <edge-namespace>\n" : "",
-    "============================================================",
-  ])
+  value = join("\n", concat(
+    [
+      "Deployment Complete!",
+      "",
+      "Cluster: ${var.cluster_name}",
+      "API Server: ${var.ocp_api_server}",
+      "Inf Node: ${var.ocp_infra_node_hostname}",
+      ""
+    ],
+    var.install_rook_ceph ? [
+      "✓ Rook-Ceph installed",
+      "  Check storage: kubectl get storageclass",
+      ""
+    ] : [],
+    var.install_edge ? [
+      "✓ Edge deployed",
+      "  Check status: kubectl get pods -n ${guardium-data-protection_deployment.edge[0].edge_namespace}",
+      ""
+    ] : []
+  ))
 }
