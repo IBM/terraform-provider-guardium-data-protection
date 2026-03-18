@@ -27,17 +27,18 @@ type EdgeDeploymentResource struct {
 
 // EdgeDeploymentResourceModel describes the resource data model
 type EdgeDeploymentResourceModel struct {
-	ID                   types.String `tfsdk:"id"`
-	EdgeName             types.String `tfsdk:"edge_name"`
-	BundleDirectory      types.String `tfsdk:"edge_bundle_directory"`
-	Platform             types.String `tfsdk:"platform"`
-	K3SMasterNode        types.String `tfsdk:"k3s_master_node"`
-	K3SNodes             types.List   `tfsdk:"k3s_nodes"`
-	EKSClusterName       types.String `tfsdk:"eks_cluster_name"`
-	MonitorMaxAttempts   types.Int64  `tfsdk:"monitor_max_attempts"`
-	MonitorSleepInterval types.Int64  `tfsdk:"monitor_sleep_interval"`
-	CleanupBundle        types.Bool   `tfsdk:"cleanup_bundle"`
-	DeleteTimeout        types.String `tfsdk:"delete_timeout"`
+	ID                      types.String `tfsdk:"id"`
+	EdgeName                types.String `tfsdk:"edge_name"`
+	BundleDirectory         types.String `tfsdk:"edge_bundle_directory"`
+	Platform                types.String `tfsdk:"platform"`
+	K3SMasterNode           types.String `tfsdk:"k3s_master_node"`
+	K3SNodes                types.List   `tfsdk:"k3s_nodes"`
+	EKSClusterName          types.String `tfsdk:"eks_cluster_name"`
+	MonitorMaxAttempts      types.Int64  `tfsdk:"monitor_max_attempts"`
+	MonitorSleepInterval    types.Int64  `tfsdk:"monitor_sleep_interval"`
+	CleanupBundle           types.Bool   `tfsdk:"cleanup_bundle"`
+	DeleteTimeout           types.String `tfsdk:"delete_timeout"`
+	OCPMachineConfigTimeout types.String `tfsdk:"ocp_machineconfig_timeout"`
 
 	// Optional OCP auth overrides (resource-level, takes precedence over provider config)
 	OCPServer             types.String `tfsdk:"ocp_server"`
@@ -126,6 +127,12 @@ func (r *EdgeDeploymentResource) Schema(ctx context.Context, req resource.Schema
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("2h"),
+			},
+			"ocp_machineconfig_timeout": schema.StringAttribute{
+				MarkdownDescription: "Timeout for OpenShift MachineConfig rollout during certificate installation (e.g. '10m', '30m', '1h'). Default: 60m. Increase this for large clusters or slow node updates.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("30m"),
 			},
 			"external_image_registry": schema.BoolAttribute{
 				MarkdownDescription: "Set to true when using an external image registry (e.g. Docker Hub, Quay) instead of the CM private registry. Skips registry certificate installation on cluster nodes (default: false).",
@@ -371,7 +378,19 @@ func (r *EdgeDeploymentResource) Create(ctx context.Context, req resource.Create
 				return
 			}
 		case "openshift":
-			if err := r.client.InstallCertsOpenShift(ctx, workDir, registry); err != nil {
+			// Parse MachineConfig timeout
+			mcTimeout, err := time.ParseDuration(data.OCPMachineConfigTimeout.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError("Invalid OCP MachineConfig Timeout",
+					fmt.Sprintf("Failed to parse ocp_machineconfig_timeout: %s", err.Error()))
+				return
+			}
+
+			tflog.Info(ctx, "Installing certificates on OpenShift", map[string]interface{}{
+				"machineconfig_timeout": mcTimeout.String(),
+			})
+
+			if err := r.client.InstallCertsOpenShift(ctx, workDir, registry, mcTimeout); err != nil {
 				resp.Diagnostics.AddError("Certificate Installation Failed", err.Error())
 				return
 			}

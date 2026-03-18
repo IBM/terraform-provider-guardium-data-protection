@@ -212,3 +212,9 @@ variable "edge_delete_timeout" {
   type        = string
   default     = "30m"
 }
+
+variable "ocp_machineconfig_timeout" {
+  description = "Timeout for OpenShift MachineConfig rollout during certificate installation. Increase for large clusters or slow node updates."
+  type        = string
+  default     = "30m"
+}

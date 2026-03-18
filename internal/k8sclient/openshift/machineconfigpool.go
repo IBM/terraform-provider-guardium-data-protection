@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // MachineConfigPoolStatus holds the status of a MachineConfigPool
 type MachineConfigPoolStatus struct {
-	MachineCount        int32
-	UpdatedMachineCount int32
+	MachineCount         int32
+	UpdatedMachineCount  int32
 	DegradedMachineCount int32
-	ReadyMachineCount   int32
+	ReadyMachineCount    int32
 }
 
 // GetMachineConfigPoolStatus retrieves the status of a MachineConfigPool
@@ -25,20 +26,28 @@ func (c *Client) GetMachineConfigPoolStatus(ctx context.Context, poolName string
 	}
 
 	return &MachineConfigPoolStatus{
-		MachineCount:        mcp.Status.MachineCount,
-		UpdatedMachineCount: mcp.Status.UpdatedMachineCount,
+		MachineCount:         mcp.Status.MachineCount,
+		UpdatedMachineCount:  mcp.Status.UpdatedMachineCount,
 		DegradedMachineCount: mcp.Status.DegradedMachineCount,
-		ReadyMachineCount:   mcp.Status.ReadyMachineCount,
+		ReadyMachineCount:    mcp.Status.ReadyMachineCount,
 	}, nil
 }
 
 // WaitForMachineConfigPoolUpdate waits for all machines in the pool to be updated.
-// It first waits for the MCP to enter Updating=True (rollout has started), then waits
-// for UpdatedMachineCount == MachineCount (rollout has finished). This prevents a false
-// positive on the initial poll before the MachineConfig daemon has begun processing the
-// newly created MachineConfig.
+// It handles three scenarios:
+// 1. Rollout is in progress (Updating=True)
+// 2. Rollout completed before we started polling (all machines already updated)
+// 3. Rollout completes during polling
 func (c *Client) WaitForMachineConfigPoolUpdate(ctx context.Context, poolName string, timeout time.Duration) error {
+	tflog.Info(ctx, "Waiting for MachineConfigPool update", map[string]interface{}{
+		"pool":    poolName,
+		"timeout": timeout.String(),
+	})
+
 	sawUpdating := false
+	initialCheckDone := false
+	var initialUpdatedCount int32
+
 	return wait.PollUntilContextTimeout(ctx, 30*time.Second, timeout, true, func(ctx context.Context) (bool, error) {
 		mcp, err := c.machineConfig.MachineconfigurationV1().MachineConfigPools().Get(ctx, poolName, metav1.GetOptions{})
 		if err != nil {
@@ -47,27 +56,77 @@ func (c *Client) WaitForMachineConfigPoolUpdate(ctx context.Context, poolName st
 
 		// Check if all machines are updated and not degraded
 		if mcp.Status.MachineCount == 0 {
-			// No machines in pool, consider it done
+			tflog.Info(ctx, "MachineConfigPool has no machines, considering it done", map[string]interface{}{
+				"pool": poolName,
+			})
 			return true, nil
 		}
 
-		// Track whether we've seen the rollout begin
+		// On first check, record the initial state
+		if !initialCheckDone {
+			initialUpdatedCount = mcp.Status.UpdatedMachineCount
+			initialCheckDone = true
+			tflog.Info(ctx, "Initial MachineConfigPool state", map[string]interface{}{
+				"pool":                 poolName,
+				"machineCount":         mcp.Status.MachineCount,
+				"updatedMachineCount":  mcp.Status.UpdatedMachineCount,
+				"degradedMachineCount": mcp.Status.DegradedMachineCount,
+				"readyMachineCount":    mcp.Status.ReadyMachineCount,
+			})
+		}
+
+		// Check if currently updating
+		isUpdating := false
 		for _, condition := range mcp.Status.Conditions {
 			if condition.Type == "Updating" && condition.Status == "True" {
+				isUpdating = true
 				sawUpdating = true
 				break
 			}
 		}
 
-		// Don't declare done until we've confirmed the rollout actually started
-		if !sawUpdating {
-			return false, nil
-		}
-
 		allUpdated := mcp.Status.UpdatedMachineCount == mcp.Status.MachineCount
 		noneDegraded := mcp.Status.DegradedMachineCount == 0
 
-		return allUpdated && noneDegraded, nil
+		tflog.Debug(ctx, "MachineConfigPool status check", map[string]interface{}{
+			"pool":                 poolName,
+			"machineCount":         mcp.Status.MachineCount,
+			"updatedMachineCount":  mcp.Status.UpdatedMachineCount,
+			"degradedMachineCount": mcp.Status.DegradedMachineCount,
+			"readyMachineCount":    mcp.Status.ReadyMachineCount,
+			"isUpdating":           isUpdating,
+			"sawUpdating":          sawUpdating,
+			"allUpdated":           allUpdated,
+			"noneDegraded":         noneDegraded,
+		})
+
+		// Success conditions:
+		// 1. All machines are updated and none degraded, AND
+		// 2. Either we saw the Updating state, OR the update count changed from initial, OR already fully updated on first check
+		if allUpdated && noneDegraded {
+			if sawUpdating || mcp.Status.UpdatedMachineCount != initialUpdatedCount || initialUpdatedCount == mcp.Status.MachineCount {
+				tflog.Info(ctx, "MachineConfigPool update completed successfully", map[string]interface{}{
+					"pool":                poolName,
+					"machineCount":        mcp.Status.MachineCount,
+					"updatedMachineCount": mcp.Status.UpdatedMachineCount,
+					"sawUpdating":         sawUpdating,
+				})
+				return true, nil
+			}
+		}
+
+		// If we're currently updating, keep waiting
+		if isUpdating {
+			tflog.Info(ctx, "MachineConfigPool is updating, waiting...", map[string]interface{}{
+				"pool":                poolName,
+				"updatedMachineCount": mcp.Status.UpdatedMachineCount,
+				"machineCount":        mcp.Status.MachineCount,
+			})
+			return false, nil
+		}
+
+		// If not updating and not all updated, keep waiting (rollout hasn't started yet)
+		return false, nil
 	})
 }
 
