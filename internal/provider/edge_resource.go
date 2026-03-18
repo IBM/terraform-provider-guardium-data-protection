@@ -155,7 +155,7 @@ func (r *EdgeDeploymentResource) Schema(ctx context.Context, req resource.Schema
 			},
 
 			// Optional OCP auth overrides (resource-level, takes precedence over provider config)
-			// Use these when OCP credentials are only available at apply time (e.g., from fyre_ocp resource output)
+			// Use these when OCP credentials are only available at apply time
 			"ocp_server": schema.StringAttribute{
 				MarkdownDescription: "OpenShift API server URL (overrides provider setting)",
 				Optional:            true,
