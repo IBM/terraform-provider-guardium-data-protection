@@ -390,8 +390,12 @@ func (c *Client) ExtractCertInfo(workDir string, externalImageRegistry bool) (re
 	}
 
 	// Save extracted info
-	os.WriteFile(filepath.Join(workDir, ".registry_info"), []byte(registry), 0644)
-	os.WriteFile(filepath.Join(workDir, ".namespace_info"), []byte(namespace), 0644)
+	if err := os.WriteFile(filepath.Join(workDir, ".registry_info"), []byte(registry), 0644); err != nil {
+		return "", "", fmt.Errorf("failed to write registry info: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(workDir, ".namespace_info"), []byte(namespace), 0644); err != nil {
+		return "", "", fmt.Errorf("failed to write namespace info: %w", err)
+	}
 
 	// Extract CM registry certificate from the secret.
 	// Skip when using an external image registry — no CM registry cert is present in the bundle.
@@ -406,7 +410,9 @@ func (c *Client) ExtractCertInfo(workDir string, externalImageRegistry bool) (re
 					if certB64 != "" {
 						certData, decodeErr := base64.StdEncoding.DecodeString(certB64)
 						if decodeErr == nil {
-							os.WriteFile(filepath.Join(workDir, ".registry_cert.crt"), certData, 0644)
+							if err := os.WriteFile(filepath.Join(workDir, ".registry_cert.crt"), certData, 0644); err != nil {
+								return "", "", fmt.Errorf("failed to write registry certificate: %w", err)
+							}
 						}
 					}
 					break
