@@ -55,7 +55,7 @@ func BuildRestConfig(ctx context.Context, cfg AuthConfig) (*rest.Config, error) 
 	case "openshift":
 		// Use native OAuth if OCP credentials provided, otherwise fall back to kubeconfig
 		if cfg.OCPServer != "" && (cfg.OCPToken != "" || (cfg.OCPUsername != "" && cfg.OCPPassword != "")) {
-			return buildOpenShiftConfig(ctx, cfg)
+			return buildOpenShiftConfig(cfg)
 		}
 		return buildKubeconfigConfig(cfg.KubeconfigPath)
 	case "k3s":
@@ -90,7 +90,7 @@ func buildKubeconfigConfig(kubeconfigPath string) (*rest.Config, error) {
 }
 
 // buildOpenShiftConfig creates config with OpenShift OAuth authentication
-func buildOpenShiftConfig(ctx context.Context, cfg AuthConfig) (*rest.Config, error) {
+func buildOpenShiftConfig(cfg AuthConfig) (*rest.Config, error) {
 	var token string
 	var err error
 

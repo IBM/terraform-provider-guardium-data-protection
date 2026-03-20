@@ -48,20 +48,7 @@ type Config struct {
 
 // NewClient creates a new Kubernetes client based on configuration
 func NewClient(ctx context.Context, cfg Config) (*Client, error) {
-	authCfg := AuthConfig{
-		KubeconfigPath:        cfg.KubeconfigPath,
-		Platform:              cfg.Platform,
-		AWSRegion:             cfg.AWSRegion,
-		AWSProfile:            cfg.AWSProfile,
-		AWSAccessKey:          cfg.AWSAccessKey,
-		AWSSecretKey:          cfg.AWSSecretKey,
-		EKSClusterName:        cfg.EKSClusterName,
-		OCPServer:             cfg.OCPServer,
-		OCPUsername:           cfg.OCPUsername,
-		OCPPassword:           cfg.OCPPassword,
-		OCPToken:              cfg.OCPToken,
-		OCPInsecureSkipVerify: cfg.OCPInsecureSkipVerify,
-	}
+	authCfg := AuthConfig(cfg)
 
 	restConfig, err := BuildRestConfig(ctx, authCfg)
 	if err != nil {

@@ -231,11 +231,11 @@ func (c *Client) UploadDirectory(host string, localPath string, remotePath strin
 			realPath, err := filepath.EvalSymlinks(path)
 			if err != nil {
 				// Skip broken symlinks
-				return nil
+				return err
 			}
 			realInfo, err := os.Stat(realPath)
 			if err != nil {
-				return nil
+				return err
 			}
 			if realInfo.IsDir() {
 				// Symlink to directory - create directory on remote
@@ -416,7 +416,12 @@ echo "[SUCCESS] All CSI driver components are ready"`, kc, config.SleepBetweenSt
 		if err != nil {
 			return fmt.Errorf("failed to clone rook repository locally: %w", err)
 		}
-		defer c.CleanupLocalRepo(localRepoPath)
+		defer func() {
+			if cleanupErr := c.CleanupLocalRepo(localRepoPath); cleanupErr != nil {
+				// Log cleanup error but don't override the main error
+				_ = cleanupErr
+			}
+		}()
 
 	} else {
 		localRepoPath = config.RookCephInstallationPath
@@ -798,7 +803,7 @@ func (c *Client) CheckRookCephInstalled(ctx context.Context, config RookCephConf
 
 	output, err := c.RunSSH(ctx, config.TargetNode, script)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 	return strings.Contains(output, "rook-ceph"), nil
 }

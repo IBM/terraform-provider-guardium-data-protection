@@ -59,27 +59,6 @@ func (c *Client) RemoveFinalizersFromNamespace(ctx context.Context, namespace st
 	return nil
 }
 
-// deleteStaleAPIService removes the KEDA external metrics APIService that causes
-// NamespaceDeletionDiscoveryFailure when the KEDA operator has already been removed.
-func (c *Client) deleteStaleAPIService(ctx context.Context) {
-	apiServiceGVR := schema.GroupVersionResource{
-		Group:    "apiregistration.k8s.io",
-		Version:  "v1",
-		Resource: "apiservices",
-	}
-	name := "v1beta1.external.metrics.k8s.io"
-	err := c.dynamic.Resource(apiServiceGVR).Delete(ctx, name, metav1.DeleteOptions{})
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			fmt.Printf("APIService %q already absent\n", name)
-		} else {
-			fmt.Printf("Warning: could not delete APIService %q: %v\n", name, err)
-		}
-		return
-	}
-	fmt.Printf("Deleted stale APIService %q\n", name)
-}
-
 // forceDeleteNamespace clears namespace spec.finalizers via the finalize subresource,
 // equivalent to: kubectl replace --raw /api/v1/namespaces/<name>/finalize
 func (c *Client) forceDeleteNamespace(ctx context.Context, namespace string) error {
@@ -105,10 +84,6 @@ func (c *Client) forceDeleteNamespace(ctx context.Context, namespace string) err
 // deadline it attempts a force-finalize as a last resort.
 func (c *Client) WaitForNamespaceDeletion(ctx context.Context, namespace string, timeout time.Duration) error {
 	fmt.Printf("Waiting up to %s for namespace %q to terminate\n", timeout, namespace)
-
-	// TODO:  delete KEDA metrics APIService directly will impact multi edge namespaces running env. Will move Keda to dedicate namespace, so it just need update WATCH_NAMESPACE in keda-deployment when one edge namespace deleted
-	// // Remove stale KEDA metrics APIService that blocks namespace deletion discovery
-	// c.deleteStaleAPIService(ctx)
 
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
