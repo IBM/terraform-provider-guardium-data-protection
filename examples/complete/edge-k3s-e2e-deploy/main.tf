@@ -1,3 +1,6 @@
+// Copyright (c) IBM Corporation
+// SPDX-License-Identifier: Apache-2.0
+
 # Complete K3S Edge Deployment
 # Uses unified guardium-data-protection Terraform provider for K3S, Rook-Ceph, and Edge deployment
 # Deploys to existing K3S clusters

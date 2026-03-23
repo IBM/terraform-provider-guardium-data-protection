@@ -1,3 +1,6 @@
+// Copyright (c) IBM Corporation
+// SPDX-License-Identifier: Apache-2.0
+
 # Complete K3S Edge Deployment Variables
 # Deploys K3S, Rook-Ceph, and Edge components to existing clusters
 

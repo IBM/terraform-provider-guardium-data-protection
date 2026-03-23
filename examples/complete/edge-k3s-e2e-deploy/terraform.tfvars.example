@@ -1,3 +1,6 @@
+// Copyright (c) IBM Corporation
+// SPDX-License-Identifier: Apache-2.0
+
 # Complete K3S Edge Deployment - Example Configuration
 # Copy this file to terraform.tfvars and fill in your values
 
