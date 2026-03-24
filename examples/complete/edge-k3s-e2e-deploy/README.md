@@ -22,7 +22,7 @@ This deployment uses the unified Guardium Data Protection Terraform provider fro
 
 | Provider | Source | Resources | Purpose |
 |----------|--------|-----------|---------|
-| `ibm/guardium-data-protection` | `registry.terraform.io/ibm/guardium-data-protection` | `guardium-data-protection_k3s_cluster`<br>`guardium-data-protection_rook_ceph_cluster`<br>`guardium-data-protection_deployment` | Unified provider for:<br>- K3S installation<br>- Rook-Ceph storage<br>- Edge deployment |
+| `ibm/guardium-data-protection` | `hashicorp.com/ibm/guardium-data-protection` | `guardium-data-protection_k3s_cluster`<br>`guardium-data-protection_rook_ceph_cluster`<br>`guardium-data-protection_deployment` | Unified provider for:<br>- K3S installation<br>- Rook-Ceph storage<br>- Edge deployment |
 
 ## Deployment Modes
 

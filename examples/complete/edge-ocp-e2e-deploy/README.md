@@ -19,7 +19,7 @@ All in **one `terraform apply` command**!
 
 | Provider | Source | Resources | Purpose |
 |----------|--------|-----------|---------|
-| `ibm/guardium-data-protection` | `registry.terraform.io/ibm/guardium-data-protection` | `guardium-data-protection_rook_ceph_cluster`<br>`guardium-data-protection_deployment` | Unified provider for:<br>- Rook-Ceph storage<br>- Edge deployment |
+| `ibm/guardium-data-protection` | `hashicorp.com/ibm/guardium-data-protection` | `guardium-data-protection_rook_ceph_cluster`<br>`guardium-data-protection_deployment` | Unified provider for:<br>- Rook-Ceph storage<br>- Edge deployment |
 
 ## Deployment Modes
 
