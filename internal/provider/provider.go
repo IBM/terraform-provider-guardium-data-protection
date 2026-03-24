@@ -389,6 +389,8 @@ func (p *GuardiumDataProtectionProvider) Resources(ctx context.Context) []func()
 		NewEdgeDeploymentResource,
 		NewK3SClusterResource,
 		NewRookCephClusterResource,
+		// AWS utilities for edge
+		NewAWSVPCCleanupResource,
 	}
 }
 
