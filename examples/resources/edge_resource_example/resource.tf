@@ -1,19 +1,3 @@
-# Provider configuration for edge installation
-provider "guardium-data-protection" {
-  # Central Manager URL and OAuth token for bundle download
-  cm_url      = "https://cm.example.com"
-  oauth_token = "your_oauth_token"
-
-  # Target platform: k3s | openshift | eks
-  platform = "target_platform"
-
-  # Edge SSH credentials — used for certificate installation and kubeconfig fetch
-  ssh_user     = "root"
-  ssh_password = "your_ssh_password"
-}
-
-
-
 # Deploy GDP Edge components to a K3S Kubernetes cluster
 resource "guardium-data-protection_deployment" "edge_example" {
   # Required: bundle source — one of edge_name or edge_bundle_directory must be set
@@ -32,7 +16,7 @@ resource "guardium-data-protection_deployment" "edge_example" {
 
   # OpenShift auth — resource-level values take precedence over provider config
   ocp_server               = "https://api.my-cluster.example.com:6443"
-  ocp_username             = "admin"
+  ocp_username             = "your_ocp_username"
   ocp_password             = "your_ocp_password" # sensitive
   ocp_token                = "your_ocp_token"    # alternative to username/password; sensitive
   ocp_insecure_skip_verify = false               # set true to skip TLS verification
