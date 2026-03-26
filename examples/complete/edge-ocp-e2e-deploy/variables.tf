@@ -1,5 +1,5 @@
-// Copyright (c) IBM Corporation
-// SPDX-License-Identifier: Apache-2.0
+# Copyright (c) IBM Corporation
+# SPDX-License-Identifier: Apache-2.0
 
 # Complete OCP Edge Deployment Variables
 # Deploys Rook-Ceph and Edge components to existing OpenShift clusters

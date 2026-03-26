@@ -1,6 +1,3 @@
-// Copyright (c) IBM Corporation
-// SPDX-License-Identifier: Apache-2.0
-
 # Complete End-to-End K3S Deployment
 
 This is a **complete end-to-end solution** that combines VM creation, K3S installation, optional Rook-Ceph storage, and optional Edge deployment in a single Terraform deployment. It uses the unified [`terraform-provider-guardium-data-protection`](../../../) provider for all resources.

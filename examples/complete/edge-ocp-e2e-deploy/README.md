@@ -1,6 +1,3 @@
-// Copyright (c) IBM Corporation
-// SPDX-License-Identifier: Apache-2.0
-
 # Complete End-to-End OCP Edge Deployment
 
 This Terraform configuration provides a complete end-to-end deployment solution for OpenShift Container Platform (OCP), with optional Rook-Ceph storage and Edge components. It uses the unified [`terraform-provider-guardium-data-protection`](../../../) provider for all resources.
