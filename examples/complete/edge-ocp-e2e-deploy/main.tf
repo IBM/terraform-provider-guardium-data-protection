@@ -8,11 +8,8 @@
 terraform {
   required_providers {
     guardium-data-protection = {
-      # For internal testing with IBM Artifactory
-      # source  = "registry.terraform.io/ibm/guardium-data-protection"
-      # For public release (uncomment when published to HashiCorp registry)
-      source  = "hashicorp.com/ibm/guardium-data-protection"
-      version = "~>1.3.8"
+      source  = "IBM/guardium-data-protection"
+      version = "~> 1.4.0"
     }
   }
 }
@@ -80,7 +77,7 @@ resource "guardium-data-protection_rook_ceph_cluster" "this" {
 # guardium-data-protection provider via WaitForNamespaceDeletion during destroy.
 # ============================================================================
 
-resource "guardium-data-protection_deployment" "edge" {
+resource "guardium-data-protection_edge_deploy" "edge" {
   count    = var.install_edge ? 1 : 0
   provider = guardium-data-protection
 
