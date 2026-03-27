@@ -1,0 +1,168 @@
+# Copyright (c) IBM Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Complete K3S Edge Deployment - Example Configuration
+# Copy this file to terraform.tfvars and fill in your values
+
+# ============================================================================
+# Deployment Control
+# ============================================================================
+
+# Set to true to deploy K3S cluster (default)
+# Set to false to skip K3S deployment and use an existing cluster
+install_k3s = true
+
+# ============================================================================
+# REQUIRED: Cluster Configuration
+# ============================================================================
+
+cluster_name = "my-k3s-cluster"
+
+# List of K3S node hostnames (first node is treated as master)
+k3s_nodes = [
+  "node1.example.com",
+  "node2.example.com",
+  "node3.example.com"
+]
+
+# K3S master node hostname (typically the first node in k3s_nodes)
+k3s_master_node = "node1.example.com"
+
+# ============================================================================
+# REQUIRED: SSH Configuration
+# ============================================================================
+
+ssh_user     = "root"
+ssh_password = "your-ssh-password"
+
+# Optional SSH connection tuning
+# ssh_options = {
+#   connect_timeout       = 30  # SSH connection timeout in seconds
+#   server_alive_interval = 10  # Interval for keepalive messages
+#   server_alive_count    = 3   # Number of keepalive messages before disconnect
+# }
+
+# ============================================================================
+# K3S Configuration
+# ============================================================================
+
+k3s_version = "v1.32.3"  # Options: v1.32.3, v1.33.1, etc.
+k3s_token   = "edge1234" # Cluster authentication token
+
+k3s_install_options = {
+  disable_traefik   = true    # Disable Traefik ingress controller
+  taint_masters     = true    # Taint master nodes (NoSchedule)
+  node_wait_timeout = "600s"  # Node readiness timeout
+}
+
+# Airgap installation (uses local binaries instead of downloading from internet)
+k3s_airgap_install           = true
+k3s_airgap_installation_path = ""  # Path to local K3S airgap binaries
+
+# ============================================================================
+# Rook-Ceph Storage Configuration (Optional)
+# ============================================================================
+
+install_rook_ceph = false  # Set to true to install Rook-Ceph storage
+
+rook_ceph_version                  = "v1.15.4"
+rook_ceph_airgap_installation_path = ""     # Path to local Rook-Ceph installation files
+rook_ceph_airgap_install           = false  # false = download from GitHub, true = use local files
+
+rook_ceph_config = {
+  set_as_default_storage = true   # Set Rook-Ceph as default storage class
+  disable_local_path     = true   # Disable K3S local-path storage
+  pod_wait_timeout       = "600s" # Timeout for pod readiness
+  sleep_between_steps    = 60     # Sleep time between installation steps
+}
+
+# ============================================================================
+# Edge Deployment Configuration (Optional)
+# ============================================================================
+
+install_edge = false  # Set to true to install Edge components
+
+# Option 1: Download bundle from Guardium Insights CM
+edge_name        = "my-edge-cluster"
+edge_cm_url      = "https://guardium-insights.example.com"
+edge_oauth_token = "your-oauth-token-here"
+
+# Option 2: Use local bundle directory (uncomment to use)
+# edge_bundle_directory = "/path/to/local/edge-bundle-directory"
+
+# Edge monitoring configuration
+edge_monitor_max_attempts   = 180  # ~30 min with 10s interval
+edge_monitor_sleep_interval = 10
+
+# Edge cleanup configuration
+edge_cleanup_bundle = true  # Cleanup downloaded bundle on destroy
+
+# Set to true when using an external image registry (e.g. Docker Hub, Quay)
+# instead of the CM private registry. Skips registry certificate installation.
+# external_image_registry = false
+
+# ============================================================================
+# Destroy Timeouts (optional - override defaults)
+# ============================================================================
+
+# k3s_delete_timeout       = "30m"
+# rook_ceph_delete_timeout = "30m"
+# edge_delete_timeout      = "30m"
+
+# ============================================================================
+# Example 1: Single Node K3S Cluster
+# ============================================================================
+# cluster_name    = "single-node"
+# k3s_nodes       = ["node1.example.com"]
+# k3s_master_node = "node1.example.com"
+# ssh_password    = "your-password"
+# install_k3s     = true
+
+# ============================================================================
+# Example 2: Multi-Node K3S Cluster with Rook-Ceph
+# ============================================================================
+# cluster_name      = "multi-node"
+# k3s_nodes         = ["node1.example.com", "node2.example.com", "node3.example.com"]
+# k3s_master_node   = "node1.example.com"
+# ssh_password      = "your-password"
+# install_k3s       = true
+# install_rook_ceph = true
+
+# ============================================================================
+# Example 3: Edge-Only Deployment to Existing K3S Cluster
+# ============================================================================
+# install_k3s      = false
+# cluster_name     = "existing-cluster"
+# k3s_nodes        = ["existing-node1.example.com", "existing-node2.example.com"]
+# k3s_master_node  = "existing-node1.example.com"
+# ssh_password     = "your-ssh-password"
+# install_edge     = true
+# edge_name        = "my-edge"
+# edge_cm_url      = "https://guardium-insights.example.com"
+# edge_oauth_token = "your-oauth-token"
+
+# ============================================================================
+# Example 4: Rook-Ceph Installation on Existing K3S Cluster
+# ============================================================================
+# install_k3s                        = false
+# cluster_name                       = "existing-cluster"
+# k3s_nodes                          = ["node1.example.com", "node2.example.com", "node3.example.com"]
+# k3s_master_node                    = "node1.example.com"
+# ssh_password                       = "your-ssh-password"
+# install_rook_ceph                  = true
+# rook_ceph_version                  = "v1.15.4"
+# rook_ceph_airgap_installation_path = "/path/to/rook-ceph-files"
+
+# ============================================================================
+# Example 5: Complete Stack (K3S + Rook-Ceph + Edge)
+# ============================================================================
+# cluster_name      = "full-stack"
+# k3s_nodes         = ["node1.example.com", "node2.example.com", "node3.example.com"]
+# k3s_master_node   = "node1.example.com"
+# ssh_password      = "your-password"
+# install_k3s       = true
+# install_rook_ceph = true
+# install_edge      = true
+# edge_name         = "my-edge"
+# edge_cm_url       = "https://guardium-insights.example.com"
+# edge_oauth_token  = "your-oauth-token"

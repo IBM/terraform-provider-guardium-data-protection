@@ -1,9 +1,12 @@
 *.dll
 *.exe
 .DS_Store
+.history
 example.tf
 terraform.tfplan
 terraform.tfstate
+.terraform.lock.hcl
+.terraform/
 bin/
 dist/
 modules-dev/

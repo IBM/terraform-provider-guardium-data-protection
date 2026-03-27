@@ -1,0 +1,148 @@
+# Copyright (c) IBM Corporation
+# SPDX-License-Identifier: Apache-2.0
+
+# Complete OCP Edge Deployment - Example Configuration
+# Copy this file to terraform.tfvars and fill in your values
+
+# ============================================================================
+# REQUIRED: OCP Cluster Configuration
+# ============================================================================
+
+cluster_name = "edge-ocp-cluster"
+
+# OCP infrastructure node hostname (for SSH access and API)
+ocp_infra_node_hostname = "ocp-cluster-inf.example.com"
+
+# OCP API server URL
+ocp_api_server = "https://api.ocp-cluster.example.com:6443"
+
+# Number of worker nodes (for Rook-Ceph configuration)
+worker_node_count = 3
+
+# ============================================================================
+# REQUIRED: OCP Authentication
+# ============================================================================
+
+# SSH credentials for OCP nodes (for Rook-Ceph installation)
+ocp_ssh_user     = "core"
+ocp_ssh_password = "your-ssh-password"
+
+# OCP admin credentials for Edge deployment (native OAuth)
+# Option A: Username/Password authentication
+ocp_admin_user     = "kubeadmin"
+ocp_admin_password = "your-admin-password"
+
+# Option B: Token authentication (alternative to username/password)
+# ocp_token = "sha256~your-token-here"  # Get via: oc whoami -t
+
+# Skip TLS verification for self-signed certs (default: true)
+ocp_insecure_skip_verify = true
+
+# ============================================================================
+# SSH Connection Options (Optional)
+# ============================================================================
+
+# ssh_options = {
+#   connect_timeout       = 30
+#   server_alive_interval = 10
+#   server_alive_count    = 3
+# }
+
+# ============================================================================
+# Rook-Ceph Storage Configuration (Optional)
+# ============================================================================
+
+install_rook_ceph = false  # Set to true to install Rook-Ceph storage
+
+rook_ceph_version                  = "v1.15.4"
+rook_ceph_airgap_installation_path = ""     # Path to local Rook-Ceph installation files
+rook_ceph_airgap_install           = true
+
+rook_ceph_config = {
+  set_as_default_storage = false
+  pod_wait_timeout       = "600s"
+  sleep_between_steps    = 60
+}
+
+# ============================================================================
+# Edge Deployment Configuration (Optional)
+# ============================================================================
+
+install_edge = false  # Set to true to install Edge components
+
+# Option 1: Download bundle from Guardium Insights CM
+edge_name        = "my-edge"
+edge_cm_url      = "https://gi-cm.example.com"
+edge_oauth_token = "your-oauth-token"
+
+# Option 2: Use local bundle directory
+# edge_bundle_directory = "/path/to/local/edge-bundle-directory"
+
+# Edge monitoring configuration
+edge_monitor_max_attempts   = 180  # ~30 min with 10s interval
+edge_monitor_sleep_interval = 10
+
+# Edge cleanup
+edge_cleanup_bundle = true
+
+# Set to true when using an external image registry (e.g. Docker Hub, Quay)
+# instead of the CM private registry. Skips registry certificate installation.
+# external_image_registry = false
+
+# ============================================================================
+# Timeout Configuration (optional - override defaults)
+# ============================================================================
+
+# Timeout for Rook-Ceph deletion
+# rook_ceph_delete_timeout = "30m"
+
+# Timeout for Edge deployment deletion
+# edge_delete_timeout = "30m"
+
+# Timeout for OpenShift MachineConfig rollout during certificate installation
+# Increase this for large clusters or slow node updates (default: 30m)
+# ocp_machineconfig_timeout = "30m"  # Examples: "30m", "1h", "2h"
+
+# ============================================================================
+# Example 1: Rook-Ceph Installation on Existing OpenShift Cluster
+# ============================================================================
+# cluster_name                       = "my-ocp-cluster"
+# ocp_infra_node_hostname            = "ocp-inf.example.com"
+# ocp_api_server                     = "https://api.ocp.example.com:6443"
+# worker_node_count                  = 3
+# ocp_ssh_user                       = "core"
+# ocp_ssh_password                   = "your-password"
+# install_rook_ceph                  = true
+# rook_ceph_version                  = "v1.15.4"
+# rook_ceph_airgap_installation_path = "/path/to/rook-ceph-files"
+
+# ============================================================================
+# Example 2: Edge-Only Deployment to Existing OpenShift Cluster
+# ============================================================================
+# cluster_name            = "my-ocp-cluster"
+# ocp_infra_node_hostname = "ocp-inf.example.com"
+# ocp_api_server          = "https://api.ocp.example.com:6443"
+# worker_node_count       = 3
+# ocp_admin_user          = "kubeadmin"
+# ocp_admin_password      = "your-admin-password"
+# install_edge            = true
+# edge_name               = "my-edge"
+# edge_cm_url             = "https://gi-cm.example.com"
+# edge_oauth_token        = "your-oauth-token"
+
+# ============================================================================
+# Example 3: Complete Stack (Rook-Ceph + Edge)
+# ============================================================================
+# cluster_name            = "ocp-edge-complete"
+# ocp_infra_node_hostname = "ocp-inf.example.com"
+# ocp_api_server          = "https://api.ocp.example.com:6443"
+# worker_node_count       = 6
+# ocp_ssh_user            = "core"
+# ocp_ssh_password        = "your-password"
+# ocp_admin_user          = "kubeadmin"
+# ocp_admin_password      = "your-admin-password"
+# install_rook_ceph       = true
+# install_edge            = true
+# edge_name               = "my-edge"
+# edge_cm_url             = "https://gi-cm.example.com"
+# edge_oauth_token        = "your-oauth-token"
