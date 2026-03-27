@@ -77,7 +77,7 @@ resource "guardium-data-protection_rook_ceph_cluster" "this" {
 # guardium-data-protection provider via WaitForNamespaceDeletion during destroy.
 # ============================================================================
 
-resource "guardium-data-protection_deployment" "edge" {
+resource "guardium-data-protection_edge_deploy" "edge" {
   count    = var.install_edge ? 1 : 0
   provider = guardium-data-protection
 

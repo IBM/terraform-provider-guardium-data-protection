@@ -147,34 +147,34 @@ output "edge_installed" {
 
 output "edge_namespace" {
   description = "Kubernetes namespace where Edge components are deployed (if installed)"
-  value       = var.install_edge ? guardium-data-protection_deployment.edge[0].edge_namespace : null
+  value       = var.install_edge ? guardium-data-protection_edge_deploy.edge[0].edge_namespace : null
 }
 
 output "edge_registry_url" {
   description = "Container registry URL used by the Edge deployment (if installed)"
-  value       = var.install_edge ? guardium-data-protection_deployment.edge[0].registry_url : null
+  value       = var.install_edge ? guardium-data-protection_edge_deploy.edge[0].registry_url : null
 }
 
 output "edge_deployment_status" {
   description = "Edge deployment status message (if installed)"
-  value       = var.install_edge ? guardium-data-protection_deployment.edge[0].deployment_status : null
+  value       = var.install_edge ? guardium-data-protection_edge_deploy.edge[0].deployment_status : null
 }
 
 output "edge_work_dir" {
   description = "Working directory for the edge bundle (if installed)"
-  value       = var.install_edge ? guardium-data-protection_deployment.edge[0].work_dir : null
+  value       = var.install_edge ? guardium-data-protection_edge_deploy.edge[0].work_dir : null
 }
 
 output "edge_summary" {
   description = "Edge deployment summary (if installed)"
   value = var.install_edge ? join("\n", [
     "Edge Deployment Summary:",
-    "  Namespace: ${guardium-data-protection_deployment.edge[0].edge_namespace}",
-    "  Platform:  ${guardium-data-protection_deployment.edge[0].platform}",
-    "  Status:    ${guardium-data-protection_deployment.edge[0].deployment_status}",
+    "  Namespace: ${guardium-data-protection_edge_deploy.edge[0].edge_namespace}",
+    "  Platform:  ${guardium-data-protection_edge_deploy.edge[0].platform}",
+    "  Status:    ${guardium-data-protection_edge_deploy.edge[0].deployment_status}",
     "",
     "To check status:",
-    "  kubectl get configmap edge-controller-client-cm -n ${guardium-data-protection_deployment.edge[0].edge_namespace} -o yaml",
-    "  kubectl get pods -n ${guardium-data-protection_deployment.edge[0].edge_namespace}",
+    "  kubectl get configmap edge-controller-client-cm -n ${guardium-data-protection_edge_deploy.edge[0].edge_namespace} -o yaml",
+    "  kubectl get pods -n ${guardium-data-protection_edge_deploy.edge[0].edge_namespace}",
   ]) : null
 }

@@ -1,5 +1,5 @@
 # Deploy GDP Edge components to a K3S Kubernetes cluster
-resource "guardium-data-protection_deployment" "edge_example" {
+resource "guardium-data-protection_edge_deploy" "edge_deploy_example" {
   # Required: bundle source — one of edge_name or edge_bundle_directory must be set
   edge_name             = "my-edge"                    # downloads bundle from Central Manager (requires cm_url + oauth_token in provider)
   edge_bundle_directory = "/path/to/edge-bundle/my-edge" # alternative: use a pre-extracted local bundle directory

@@ -71,7 +71,7 @@ func NewEdgeDeploymentResource() resource.Resource {
 }
 
 func (r *EdgeDeploymentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_deployment"
+	resp.TypeName = req.ProviderTypeName + "_edge_deploy"
 }
 
 func (r *EdgeDeploymentResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
