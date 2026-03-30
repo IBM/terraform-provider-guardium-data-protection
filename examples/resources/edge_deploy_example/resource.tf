@@ -1,7 +1,7 @@
 # Deploy GDP Edge components to a K3S Kubernetes cluster
 resource "guardium-data-protection_edge_deploy" "edge_deploy_example" {
   # Required: bundle source — one of edge_name or edge_bundle_directory must be set
-  edge_name             = "my-edge"                    # downloads bundle from Central Manager (requires cm_url + oauth_token in provider)
+  edge_name             = "my-edge"                      # downloads bundle from Central Manager (requires cm_url + oauth_token in provider)
   edge_bundle_directory = "/path/to/edge-bundle/my-edge" # alternative: use a pre-extracted local bundle directory
 
   # Required: target platform — k3s | openshift | eks
@@ -41,9 +41,9 @@ resource "guardium-data-protection_edge_deploy" "edge_deploy_example" {
   external_image_registry = false # set true to skip CM registry cert install (default: false)
 
   # Optional parameters
-  monitor_max_attempts    = 180   # max polling attempts waiting for pods (default: 180)
-  monitor_sleep_interval  = 10    # seconds between polls (default: 10)
-  cleanup_bundle          = true  # remove downloaded bundle on destroy (default: true)
-  delete_timeout          = "2h"  # timeout for destroy operation (default: "2h")
+  monitor_max_attempts   = 180  # max polling attempts waiting for pods (default: 180)
+  monitor_sleep_interval = 10   # seconds between polls (default: 10)
+  cleanup_bundle         = true # remove downloaded bundle on destroy (default: true)
+  delete_timeout         = "2h" # timeout for destroy operation (default: "2h")
 
 }

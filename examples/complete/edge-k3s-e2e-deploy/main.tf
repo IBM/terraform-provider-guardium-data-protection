@@ -38,14 +38,14 @@ provider "guardium-data-protection" {
   platform     = "k3s"
   ssh_user     = var.ssh_user
   ssh_password = var.ssh_password
-  
+
   # K3s config (prefixed)
   k3s_ssh_user              = var.ssh_user
   k3s_ssh_password          = var.ssh_password
   k3s_connect_timeout       = var.ssh_options.connect_timeout
   k3s_server_alive_interval = var.ssh_options.server_alive_interval
   k3s_server_alive_count    = var.ssh_options.server_alive_count
-  
+
   # Rook-Ceph config (prefixed)
   rook_ceph_ssh_user              = var.ssh_user
   rook_ceph_ssh_password          = var.ssh_password
@@ -62,7 +62,7 @@ provider "guardium-data-protection" {
 
 resource "guardium-data-protection_k3s_cluster" "main" {
   provider = guardium-data-protection
-  count    = var.install_k3s ? 1 : 0  # count=0 means resource not created, existing K3S unaffected
+  count    = var.install_k3s ? 1 : 0 # count=0 means resource not created, existing K3S unaffected
 
   cluster_name             = var.cluster_name
   master_nodes             = [var.k3s_master_node]
@@ -87,19 +87,19 @@ resource "guardium-data-protection_rook_ceph_cluster" "this" {
 
   depends_on = [guardium-data-protection_k3s_cluster.main]
 
-  cluster_name                = var.cluster_name
-  platform                    = "k3s"
-  target_node                 = local.k3s_master_node
-  rook_ceph_version           = var.rook_ceph_version
+  cluster_name                       = var.cluster_name
+  platform                           = "k3s"
+  target_node                        = local.k3s_master_node
+  rook_ceph_version                  = var.rook_ceph_version
   airgap_rook_ceph_installation_path = var.rook_ceph_airgap_installation_path
-  airgap_install              = var.rook_ceph_airgap_install
-  worker_count                = local.worker_count
-  taint_masters               = var.k3s_install_options.taint_masters
-  set_as_default_storage      = var.rook_ceph_config.set_as_default_storage
-  disable_local_path          = var.rook_ceph_config.disable_local_path
-  pod_wait_timeout            = var.rook_ceph_config.pod_wait_timeout
-  sleep_between_steps         = var.rook_ceph_config.sleep_between_steps
-  delete_timeout              = var.rook_ceph_delete_timeout
+  airgap_install                     = var.rook_ceph_airgap_install
+  worker_count                       = local.worker_count
+  taint_masters                      = var.k3s_install_options.taint_masters
+  set_as_default_storage             = var.rook_ceph_config.set_as_default_storage
+  disable_local_path                 = var.rook_ceph_config.disable_local_path
+  pod_wait_timeout                   = var.rook_ceph_config.pod_wait_timeout
+  sleep_between_steps                = var.rook_ceph_config.sleep_between_steps
+  delete_timeout                     = var.rook_ceph_delete_timeout
 }
 
 # ============================================================================
