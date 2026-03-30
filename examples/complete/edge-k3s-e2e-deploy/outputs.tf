@@ -58,11 +58,11 @@ output "kubeconfig_location" {
 output "deployment_summary" {
   description = "Complete deployment summary"
   value = {
-    cluster_name   = var.cluster_name
-    k3s_version    = var.install_k3s ? guardium-data-protection_k3s_cluster.main[0].k3s_version : "existing"
-    master_node    = var.k3s_master_node
-    worker_count   = local.worker_count
-    total_nodes    = length(var.k3s_nodes)
+    cluster_name = var.cluster_name
+    k3s_version  = var.install_k3s ? guardium-data-protection_k3s_cluster.main[0].k3s_version : "existing"
+    master_node  = var.k3s_master_node
+    worker_count = local.worker_count
+    total_nodes  = length(var.k3s_nodes)
   }
 }
 

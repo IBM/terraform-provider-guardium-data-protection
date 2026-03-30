@@ -29,9 +29,9 @@ locals {
 
 provider "guardium-data-protection" {
   # Rook-Ceph configuration (prefixed)
-  rook_ceph_ssh_user             = var.ocp_ssh_user
-  rook_ceph_ssh_password         = var.ocp_ssh_password
-  rook_ceph_connect_timeout      = var.ssh_options.connect_timeout
+  rook_ceph_ssh_user              = var.ocp_ssh_user
+  rook_ceph_ssh_password          = var.ocp_ssh_password
+  rook_ceph_connect_timeout       = var.ssh_options.connect_timeout
   rook_ceph_server_alive_interval = var.ssh_options.server_alive_interval
   rook_ceph_server_alive_count    = var.ssh_options.server_alive_count
 
@@ -58,17 +58,17 @@ resource "guardium-data-protection_rook_ceph_cluster" "this" {
   provider = guardium-data-protection
   count    = var.install_rook_ceph ? 1 : 0
 
-  cluster_name                     = var.cluster_name
-  platform                         = "openshift"
-  target_node                      = var.ocp_infra_node_hostname
-  rook_ceph_version                = var.rook_ceph_version
+  cluster_name                       = var.cluster_name
+  platform                           = "openshift"
+  target_node                        = var.ocp_infra_node_hostname
+  rook_ceph_version                  = var.rook_ceph_version
   airgap_rook_ceph_installation_path = var.rook_ceph_airgap_installation_path
-  airgap_install                   = var.rook_ceph_airgap_install
-  worker_count                     = var.worker_node_count
-  set_as_default_storage           = var.rook_ceph_config.set_as_default_storage
-  pod_wait_timeout                 = var.rook_ceph_config.pod_wait_timeout
-  sleep_between_steps              = var.rook_ceph_config.sleep_between_steps
-  delete_timeout                   = var.rook_ceph_delete_timeout
+  airgap_install                     = var.rook_ceph_airgap_install
+  worker_count                       = var.worker_node_count
+  set_as_default_storage             = var.rook_ceph_config.set_as_default_storage
+  pod_wait_timeout                   = var.rook_ceph_config.pod_wait_timeout
+  sleep_between_steps                = var.rook_ceph_config.sleep_between_steps
+  delete_timeout                     = var.rook_ceph_delete_timeout
 }
 
 # ============================================================================
@@ -94,10 +94,10 @@ resource "guardium-data-protection_edge_deploy" "edge" {
   ocp_token                = var.ocp_token
   ocp_insecure_skip_verify = var.ocp_insecure_skip_verify
 
-  monitor_max_attempts       = var.edge_monitor_max_attempts
-  monitor_sleep_interval     = var.edge_monitor_sleep_interval
-  cleanup_bundle             = var.edge_cleanup_bundle
-  delete_timeout             = var.edge_delete_timeout
-  ocp_machineconfig_timeout  = var.ocp_machineconfig_timeout
-  external_image_registry    = var.external_image_registry
+  monitor_max_attempts      = var.edge_monitor_max_attempts
+  monitor_sleep_interval    = var.edge_monitor_sleep_interval
+  cleanup_bundle            = var.edge_cleanup_bundle
+  delete_timeout            = var.edge_delete_timeout
+  ocp_machineconfig_timeout = var.ocp_machineconfig_timeout
+  external_image_registry   = var.external_image_registry
 }

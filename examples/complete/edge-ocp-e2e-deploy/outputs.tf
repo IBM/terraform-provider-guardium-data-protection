@@ -125,18 +125,18 @@ output "edge_summary" {
 output "deployment_summary" {
   description = "Complete deployment summary"
   value = {
-    cluster_name   = var.cluster_name
-    inf_node       = var.ocp_infra_node_hostname
-    api_server     = var.ocp_api_server
-    worker_count   = var.worker_node_count
-    rook_ceph      = var.install_rook_ceph
-    edge           = var.install_edge
+    cluster_name = var.cluster_name
+    inf_node     = var.ocp_infra_node_hostname
+    api_server   = var.ocp_api_server
+    worker_count = var.worker_node_count
+    rook_ceph    = var.install_rook_ceph
+    edge         = var.install_edge
   }
 }
 
 output "access_instructions" {
   description = "Instructions for accessing the cluster"
-  value = <<-EOT
+  value       = <<-EOT
     OpenShift Cluster Access:
 
     1. API Server: ${var.ocp_api_server}
