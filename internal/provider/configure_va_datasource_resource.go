@@ -109,16 +109,16 @@ func (r *configureVADatasourceResource) Configure(ctx context.Context, req resou
 		return
 	}
 
-	client, ok := req.ProviderData.(*gdp.Client)
+	unifiedClient, ok := req.ProviderData.(*UnifiedClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *gdp.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *UnifiedClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	r.client = unifiedClient.GDPClient
 }
 
 func (r *configureVADatasourceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

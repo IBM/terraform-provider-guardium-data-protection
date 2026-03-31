@@ -88,17 +88,17 @@ func (d *AuthenticationDataSource) Configure(ctx context.Context, req datasource
 		return
 	}
 
-	client, ok := req.ProviderData.(*gdp.Client)
+	unifiedClient, ok := req.ProviderData.(*UnifiedClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *gdp.Client, got: %T.", req.ProviderData),
+			fmt.Sprintf("Expected *UnifiedClient, got: %T.", req.ProviderData),
 		)
 
 		return
 	}
 
-	d.client = client
+	d.client = unifiedClient.GDPClient
 }
 
 type AuthenticationResponse struct {

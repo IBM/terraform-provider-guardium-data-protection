@@ -77,13 +77,13 @@ func (r *ImportProfilesResource) Configure(ctx context.Context, req resource.Con
 		return
 	}
 
-	client, ok := req.ProviderData.(*gdp.Client)
+	unifiedClient, ok := req.ProviderData.(*UnifiedClient)
 	if !ok {
-		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *gdp.Client, got: %T", req.ProviderData))
+		resp.Diagnostics.AddError("Unexpected Resource Configure Type", fmt.Sprintf("Expected *UnifiedClient, got: %T", req.ProviderData))
 		return
 	}
 
-	r.client = client
+	r.client = unifiedClient.GDPClient
 }
 
 // Create creates the resource and sets the initial Terraform state
