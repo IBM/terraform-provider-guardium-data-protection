@@ -7,9 +7,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"strconv"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -92,16 +93,16 @@ func (r *registerVADatasourceResource) Configure(ctx context.Context, req resour
 		return
 	}
 
-	client, ok := req.ProviderData.(*gdp.Client)
+	unifiedClient, ok := req.ProviderData.(*UnifiedClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *gdp.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *UnifiedClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 		return
 	}
 
-	r.client = client
+	r.client = unifiedClient.GDPClient
 }
 
 func (r *registerVADatasourceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
