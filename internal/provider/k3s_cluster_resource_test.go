@@ -123,19 +123,28 @@ func TestK3SClusterResource_Schema(t *testing.T) {
 	}
 
 	// Verify cluster_name is required
-	clusterNameAttr := resp.Schema.Attributes["cluster_name"].(schema.StringAttribute)
+	clusterNameAttr, ok := resp.Schema.Attributes["cluster_name"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("cluster_name attribute is not a StringAttribute")
+	}
 	if !clusterNameAttr.Required {
 		t.Error("Expected cluster_name to be required")
 	}
 
 	// Verify master_nodes is required
-	masterNodesAttr := resp.Schema.Attributes["master_nodes"].(schema.ListAttribute)
+	masterNodesAttr, ok := resp.Schema.Attributes["master_nodes"].(schema.ListAttribute)
+	if !ok {
+		t.Fatal("master_nodes attribute is not a ListAttribute")
+	}
 	if !masterNodesAttr.Required {
 		t.Error("Expected master_nodes to be required")
 	}
 
 	// Verify k3s_token is sensitive
-	k3sTokenAttr := resp.Schema.Attributes["k3s_token"].(schema.StringAttribute)
+	k3sTokenAttr, ok := resp.Schema.Attributes["k3s_token"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("k3s_token attribute is not a StringAttribute")
+	}
 	if !k3sTokenAttr.Sensitive {
 		t.Error("Expected k3s_token to be sensitive")
 	}

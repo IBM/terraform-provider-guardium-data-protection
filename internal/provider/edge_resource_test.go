@@ -168,12 +168,18 @@ func TestEdgeDeploymentResource_Schema(t *testing.T) {
 	}
 
 	// Verify sensitive attributes
-	ocpPasswordAttr := resp.Schema.Attributes["ocp_password"].(schema.StringAttribute)
+	ocpPasswordAttr, ok := resp.Schema.Attributes["ocp_password"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("ocp_password attribute is not a StringAttribute")
+	}
 	if !ocpPasswordAttr.Sensitive {
 		t.Error("Expected ocp_password to be sensitive")
 	}
 
-	ocpTokenAttr := resp.Schema.Attributes["ocp_token"].(schema.StringAttribute)
+	ocpTokenAttr, ok := resp.Schema.Attributes["ocp_token"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("ocp_token attribute is not a StringAttribute")
+	}
 	if !ocpTokenAttr.Sensitive {
 		t.Error("Expected ocp_token to be sensitive")
 	}

@@ -63,7 +63,10 @@ func TestAWSVPCCleanupResource_Schema(t *testing.T) {
 		}
 	}
 
-	idAttr := resp.Schema.Attributes["id"].(schema.StringAttribute)
+	idAttr, ok := resp.Schema.Attributes["id"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("id attribute is not a StringAttribute")
+	}
 	if !idAttr.Computed {
 		t.Error("id should be computed")
 	}
@@ -71,7 +74,10 @@ func TestAWSVPCCleanupResource_Schema(t *testing.T) {
 		t.Error("id should include plan modifiers")
 	}
 
-	vpcIDAttr := resp.Schema.Attributes["vpc_id"].(schema.StringAttribute)
+	vpcIDAttr, ok := resp.Schema.Attributes["vpc_id"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("vpc_id attribute is not a StringAttribute")
+	}
 	if !vpcIDAttr.Required {
 		t.Error("vpc_id should be required")
 	}
@@ -79,17 +85,26 @@ func TestAWSVPCCleanupResource_Schema(t *testing.T) {
 		t.Error("vpc_id should include replace plan modifiers")
 	}
 
-	regionAttr := resp.Schema.Attributes["region"].(schema.StringAttribute)
+	regionAttr, ok := resp.Schema.Attributes["region"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("region attribute is not a StringAttribute")
+	}
 	if !regionAttr.Required {
 		t.Error("region should be required")
 	}
 
-	profileAttr := resp.Schema.Attributes["profile"].(schema.StringAttribute)
+	profileAttr, ok := resp.Schema.Attributes["profile"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("profile attribute is not a StringAttribute")
+	}
 	if !profileAttr.Optional {
 		t.Error("profile should be optional")
 	}
 
-	accessKeyAttr := resp.Schema.Attributes["access_key_id"].(schema.StringAttribute)
+	accessKeyAttr, ok := resp.Schema.Attributes["access_key_id"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("access_key_id attribute is not a StringAttribute")
+	}
 	if !accessKeyAttr.Optional {
 		t.Error("access_key_id should be optional")
 	}
@@ -97,7 +112,10 @@ func TestAWSVPCCleanupResource_Schema(t *testing.T) {
 		t.Error("access_key_id should be sensitive")
 	}
 
-	secretKeyAttr := resp.Schema.Attributes["secret_access_key"].(schema.StringAttribute)
+	secretKeyAttr, ok := resp.Schema.Attributes["secret_access_key"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("secret_access_key attribute is not a StringAttribute")
+	}
 	if !secretKeyAttr.Optional {
 		t.Error("secret_access_key should be optional")
 	}
