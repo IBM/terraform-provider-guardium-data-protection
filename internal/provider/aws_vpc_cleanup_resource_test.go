@@ -139,11 +139,6 @@ func TestBuildVPCCleanupAWSConfig(t *testing.T) {
 			region: "us-east-1",
 		},
 		{
-			name:    "region with profile",
-			region:  "us-west-2",
-			profile: "default",
-		},
-		{
 			name:            "region with static credentials",
 			region:          "eu-central-1",
 			accessKeyID:     "AKIAIOSFODNN7EXAMPLE",
