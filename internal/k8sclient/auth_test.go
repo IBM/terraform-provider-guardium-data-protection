@@ -88,7 +88,7 @@ func TestBuildOpenShiftConfig_WithToken(t *testing.T) {
 		t.Errorf("config.BearerToken = %q, want %q", config.BearerToken, cfg.OCPToken)
 	}
 
-	if !config.TLSClientConfig.Insecure {
+	if !config.Insecure {
 		t.Error("config.TLSClientConfig.Insecure = false, want true")
 	}
 }

@@ -17,7 +17,6 @@ import (
 
 // mockEdgeClient is a mock implementation of the Edge client for testing
 type mockEdgeClient struct {
-	config                    edgeclient.Config
 	downloadBundleFunc        func(edgeName, workDir string) error
 	fetchKubeconfigFunc       func(masterNode, kubeconfigPath string) error
 	initK8sClientFunc         func(ctx context.Context, kubeconfigPath string) error

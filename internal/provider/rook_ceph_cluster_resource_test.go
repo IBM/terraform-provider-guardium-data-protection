@@ -102,23 +102,35 @@ func TestRookCephClusterResource_Schema(t *testing.T) {
 	}
 
 	// Verify required fields
-	clusterNameAttr := resp.Schema.Attributes["cluster_name"].(schema.StringAttribute)
+	clusterNameAttr, ok := resp.Schema.Attributes["cluster_name"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("cluster_name attribute is not a StringAttribute")
+	}
 	if !clusterNameAttr.Required {
 		t.Error("Expected cluster_name to be required")
 	}
 
-	platformAttr := resp.Schema.Attributes["platform"].(schema.StringAttribute)
+	platformAttr, ok := resp.Schema.Attributes["platform"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("platform attribute is not a StringAttribute")
+	}
 	if !platformAttr.Required {
 		t.Error("Expected platform to be required")
 	}
 
-	targetNodeAttr := resp.Schema.Attributes["target_node"].(schema.StringAttribute)
+	targetNodeAttr, ok := resp.Schema.Attributes["target_node"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("target_node attribute is not a StringAttribute")
+	}
 	if !targetNodeAttr.Required {
 		t.Error("Expected target_node to be required")
 	}
 
 	// Verify computed fields
-	namespaceAttr := resp.Schema.Attributes["namespace"].(schema.StringAttribute)
+	namespaceAttr, ok := resp.Schema.Attributes["namespace"].(schema.StringAttribute)
+	if !ok {
+		t.Fatal("namespace attribute is not a StringAttribute")
+	}
 	if !namespaceAttr.Computed {
 		t.Error("Expected namespace to be computed")
 	}

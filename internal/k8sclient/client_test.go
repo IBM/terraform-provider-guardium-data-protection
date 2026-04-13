@@ -119,7 +119,7 @@ type mockClient struct {
 
 // createMockClient creates a mock k8s client for testing
 func createMockClient(objects ...runtime.Object) *mockClient {
-	fakeClientset := k8sfake.NewSimpleClientset(objects...)
+	fakeClientset := k8sfake.NewClientset(objects...)
 	dynamicClient := fake.NewSimpleDynamicClient(scheme.Scheme, objects...)
 
 	client := &Client{
@@ -547,7 +547,7 @@ func TestNewConfigMapWithBinaryData(t *testing.T) {
 		"text": "value",
 	}
 	binaryData := map[string][]byte{
-		"binary": []byte{0x01, 0x02, 0x03},
+		"binary": {0x01, 0x02, 0x03},
 	}
 
 	cm := NewConfigMapWithBinaryData(namespace, name, data, binaryData)

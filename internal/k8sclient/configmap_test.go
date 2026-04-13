@@ -254,23 +254,15 @@ func TestWaitForConfigMapExists_Timeout(t *testing.T) {
 // TestConfigMapFieldCondition tests ConfigMap field condition function
 func TestConfigMapFieldCondition(t *testing.T) {
 	// Test a simple condition function
-	condition := func(value string) (bool, error) {
-		return value == "expected", nil
+	condition := func(value string) bool {
+		return value == "expected"
 	}
 
-	done, err := condition("expected")
-	if err != nil {
-		t.Errorf("Condition function error = %v", err)
-	}
-	if !done {
+	if !condition("expected") {
 		t.Error("Condition function should return true for matching value")
 	}
 
-	done, err = condition("other")
-	if err != nil {
-		t.Errorf("Condition function error = %v", err)
-	}
-	if done {
+	if condition("other") {
 		t.Error("Condition function should return false for non-matching value")
 	}
 }
