@@ -62,13 +62,13 @@ func (s *SecureClient) createSecureHTTPClient() (*http.Client, error) {
 }
 
 // ImportProfilesFromFile imports profiles from a local file using secure TLS connection
-func (s *SecureClient) ImportProfilesFromFile(ctx context.Context, accessToken, pathToFile string, updateMode bool) error {
+func (s *SecureClient) ImportProfilesFromFile(ctx context.Context, accessToken, pathToFile string, updateMode, testConnections bool) error {
 	secureClient, err := s.createSecureHTTPClient()
 	if err != nil {
 		return fmt.Errorf("failed to create secure HTTP client: %w", err)
 	}
 
-	return s.Client.ImportProfilesFromFile(ctx, secureClient, accessToken, pathToFile, updateMode)
+	return s.Client.ImportProfilesFromFile(ctx, secureClient, accessToken, pathToFile, updateMode, testConnections)
 }
 
 // GenerateAccessToken generates an access token using secure TLS connection

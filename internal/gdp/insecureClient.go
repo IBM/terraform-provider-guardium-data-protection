@@ -24,7 +24,7 @@ func (c *Client) NewInsecureClient() *InsecureClient {
 	}
 }
 
-func (i *InsecureClient) ImportProfilesFromFile(ctx context.Context, accessToken, pathToFile string, updateMode bool) error {
+func (i *InsecureClient) ImportProfilesFromFile(ctx context.Context, accessToken, pathToFile string, updateMode, testConnections bool) error {
 	insecureClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -33,7 +33,7 @@ func (i *InsecureClient) ImportProfilesFromFile(ctx context.Context, accessToken
 		},
 	}
 
-	return i.Client.ImportProfilesFromFile(ctx, insecureClient, accessToken, pathToFile, updateMode)
+	return i.Client.ImportProfilesFromFile(ctx, insecureClient, accessToken, pathToFile, updateMode, testConnections)
 }
 
 func (i *InsecureClient) GenerateAccessToken(ctx context.Context, clientSecret, username, password, clientId string) (string, error) {

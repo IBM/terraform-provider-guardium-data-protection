@@ -103,7 +103,7 @@ type ImportProfilesFromFileResponse struct {
 
 // ImportProfilesFromFile imports profiles from a local file using multipart/form-data upload
 // Requires GDP 12.2.1 or higher
-func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Client, accessToken, pathToFile string, updateMode bool) error {
+func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Client, accessToken, pathToFile string, updateMode, testConnections bool) error {
 	// Prepare the request URL
 	importProfilesFromFileUrl := fmt.Sprintf("%s://%s:%s/restAPI/importProfilesFromFile", c.protocol, c.Host, c.port)
 
@@ -149,7 +149,11 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 
 	// Add TestConnections parameter
-	err = writer.WriteField("TestConnections", "false")
+	testConnectionsStr := "false"
+	if testConnections {
+		testConnectionsStr = "true"
+	}
+	err = writer.WriteField("TestConnections", testConnectionsStr)
 	if err != nil {
 		return fmt.Errorf("error writing TestConnections field: %w", err)
 	}

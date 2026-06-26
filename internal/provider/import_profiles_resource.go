@@ -22,11 +22,12 @@ type ImportProfilesResource struct {
 
 // ImportProfilesResourceModel describes the resource data model
 type ImportProfilesResourceModel struct {
-	AccessToken types.String `tfsdk:"access_token"`
-	PathToFile  types.String `tfsdk:"path_to_file"`
-	UpdateMode  types.Bool   `tfsdk:"update_mode"`
-	ID          types.String `tfsdk:"id"`
-	CaPath      types.String `tfsdk:"ca_path"`
+	AccessToken     types.String `tfsdk:"access_token"`
+	PathToFile      types.String `tfsdk:"path_to_file"`
+	UpdateMode      types.Bool   `tfsdk:"update_mode"`
+	TestConnections types.Bool   `tfsdk:"test_connections"`
+	ID              types.String `tfsdk:"id"`
+	CaPath          types.String `tfsdk:"ca_path"`
 }
 
 func NewImportProfilesResource() resource.Resource {
@@ -59,6 +60,10 @@ func (r *ImportProfilesResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"update_mode": schema.BoolAttribute{
 				MarkdownDescription: "Update mode",
 				Required:            true,
+			},
+			"test_connections": schema.BoolAttribute{
+				MarkdownDescription: "Test connections for imported profiles that support it (e.g., Kafka-based UCs)",
+				Optional:            true,
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -97,7 +102,11 @@ func (r *ImportProfilesResource) Create(ctx context.Context, req resource.Create
 
 	if data.CaPath.IsNull() {
 		c := r.client.NewInsecureClient()
-		if err := c.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool()); err != nil {
+		testConnections := false
+		if !data.TestConnections.IsNull() {
+			testConnections = data.TestConnections.ValueBool()
+		}
+		if err := c.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections); err != nil {
 			resp.Diagnostics.AddError("Error importing profiles", fmt.Sprintf("Could not import profiles: %s", err))
 			return
 		}
@@ -137,7 +146,11 @@ func (r *ImportProfilesResource) Update(ctx context.Context, req resource.Update
 
 	if data.CaPath.IsNull() {
 		c := r.client.NewInsecureClient()
-		if err := c.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool()); err != nil {
+		testConnections := false
+		if !data.TestConnections.IsNull() {
+			testConnections = data.TestConnections.ValueBool()
+		}
+		if err := c.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections); err != nil {
 			resp.Diagnostics.AddError(
 				"Error importing profiles",
 				fmt.Sprintf("Could not import profiles: %s", err),
