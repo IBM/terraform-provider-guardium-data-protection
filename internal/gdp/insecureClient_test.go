@@ -308,7 +308,7 @@ func TestInsecureClient_ImportProfilesFromFile(t *testing.T) {
 			insecureClient := baseClient.NewInsecureClient()
 
 			ctx := context.Background()
-			err = insecureClient.ImportProfilesFromFile(ctx, "test-token", tmpFile.Name(), tc.updateMode)
+			err = insecureClient.ImportProfilesFromFile(ctx, "test-token", tmpFile.Name(), tc.updateMode, false)
 
 			if tc.expectError && err == nil {
 				t.Error("Expected error but got nil")

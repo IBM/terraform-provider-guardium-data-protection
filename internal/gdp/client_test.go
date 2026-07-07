@@ -517,7 +517,7 @@ func TestImportProfilesFromFile(t *testing.T) {
 
 			// Call the function
 			ctx := context.Background()
-			err = client.ImportProfilesFromFile(ctx, server.Client(), tc.accessToken, tmpFile.Name(), tc.updateMode)
+			err = client.ImportProfilesFromFile(ctx, server.Client(), tc.accessToken, tmpFile.Name(), tc.updateMode, false)
 
 			// Check error
 			if tc.expectError && err == nil {
