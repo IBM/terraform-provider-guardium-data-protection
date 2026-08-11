@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -127,7 +128,7 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				Optional:            true,
 			},
 			"k3s_ssh_known_hosts_file": schema.StringAttribute{
-				MarkdownDescription: "Path to a known_hosts file used to verify K3s node SSH host keys. Can also be set via K3S_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled and connections are vulnerable to MITM attacks.",
+				MarkdownDescription: "Path to a known_hosts file used to verify K3s node SSH host keys. Can also be set via K3S_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled.",
 				Optional:            true,
 			},
 
@@ -154,7 +155,7 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				Optional:            true,
 			},
 			"rook_ceph_ssh_known_hosts_file": schema.StringAttribute{
-				MarkdownDescription: "Path to a known_hosts file used to verify Rook-Ceph node SSH host keys. Can also be set via ROOK_CEPH_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled and connections are vulnerable to MITM attacks.",
+				MarkdownDescription: "Path to a known_hosts file used to verify Rook-Ceph node SSH host keys. Can also be set via ROOK_CEPH_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled",
 				Optional:            true,
 			},
 
@@ -186,7 +187,7 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				Optional:            true,
 			},
 			"ssh_known_hosts_file": schema.StringAttribute{
-				MarkdownDescription: "Path to a known_hosts file used to verify edge/EKS node SSH host keys. Can also be set via GDP_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled and connections are vulnerable to MITM attacks.",
+				MarkdownDescription: "Path to a known_hosts file used to verify edge/EKS node SSH host keys. Can also be set via GDP_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled.",
 				Optional:            true,
 			},
 			"aws_region": schema.StringAttribute{
@@ -299,6 +300,14 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		sshUser = "root"
 	}
 
+	if sshUser != "" && (sshPassword != "" || sshKeyPath != "") && sshKnownHostsFile == "" {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("ssh_known_hosts_file"),
+			"SSH host key verification disabled",
+			"No known_hosts file is configured for edge/EKS node SSH connections, so host key verification is skipped and connections are vulnerable to MITM attacks. Set ssh_known_hosts_file (or the GDP_SSH_KNOWN_HOSTS_FILE environment variable) to a known_hosts file to enable verification.",
+		)
+	}
+
 	edgeClient := edgeclient.NewClient(edgeclient.Config{
 		CMUrl:                 cmUrl,
 		OAuthToken:            oauthToken,
@@ -351,6 +360,14 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 			ServerAliveCount:    k3sServerAliveCount,
 			KnownHostsFile:      k3sSSHKnownHostsFile,
 		})
+
+		if k3sSSHKnownHostsFile == "" {
+			resp.Diagnostics.AddAttributeWarning(
+				path.Root("k3s_ssh_known_hosts_file"),
+				"SSH host key verification disabled",
+				"No known_hosts file is configured for K3s node SSH connections, so host key verification is skipped and connections are vulnerable to MITM attacks. Set k3s_ssh_known_hosts_file (or the K3S_SSH_KNOWN_HOSTS_FILE environment variable) to a known_hosts file to enable verification.",
+			)
+		}
 	}
 
 	// ===== Rook-Ceph Client Configuration =====
@@ -382,6 +399,14 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 			ServerAliveCount:    rookCephServerAliveCount,
 			KnownHostsFile:      rookCephSSHKnownHostsFile,
 		})
+
+		if rookCephSSHKnownHostsFile == "" {
+			resp.Diagnostics.AddAttributeWarning(
+				path.Root("rook_ceph_ssh_known_hosts_file"),
+				"SSH host key verification disabled",
+				"No known_hosts file is configured for Rook-Ceph node SSH connections, so host key verification is skipped and connections are vulnerable to MITM attacks. Set rook_ceph_ssh_known_hosts_file (or the ROOK_CEPH_SSH_KNOWN_HOSTS_FILE environment variable) to a known_hosts file to enable verification.",
+			)
+		}
 	}
 
 	// ===== Create Unified Client =====

@@ -12,11 +12,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/k8sclient"
@@ -61,6 +63,18 @@ type Client struct {
 	Config    Config
 	k8sClient *k8sclient.Client
 	sshClient *SSHClient
+
+	knownHostsWarnOnce sync.Once
+}
+
+// warnIfNoKnownHosts logs (once per Client) that SSH host key verification is
+// disabled when no known_hosts file is configured.
+func (c *Client) warnIfNoKnownHosts() {
+	if c.Config.KnownHostsFile == "" {
+		c.knownHostsWarnOnce.Do(func() {
+			log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured)")
+		})
+	}
 }
 
 // NewClient creates a new Client
@@ -71,6 +85,7 @@ func NewClient(cfg Config) *Client {
 
 	// Initialize SSH client if credentials provided
 	if cfg.SSHUser != "" && (cfg.SSHPassword != "" || cfg.SSHKeyPath != "") {
+		c.warnIfNoKnownHosts()
 		sshClient, err := NewSSHClient(cfg.SSHUser, cfg.SSHPassword, cfg.SSHKeyPath, cfg.KnownHostsFile)
 		if err == nil {
 			c.sshClient = sshClient
@@ -531,6 +546,7 @@ func (c *Client) InstallCertsEKS(ctx context.Context, workDir string, registryHo
 	}
 
 	// Create SSH client with EKS-specific credentials (passphrase passed as password)
+	c.warnIfNoKnownHosts()
 	eksSSH, err := NewSSHClient(c.Config.EKSSSHUser, c.Config.EKSSSHKeyPassphrase, c.Config.EKSSSHKeyPath, c.Config.KnownHostsFile)
 	if err != nil {
 		return fmt.Errorf("failed to create EKS SSH client: %w", err)

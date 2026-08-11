@@ -29,7 +29,7 @@ type SSHClient struct {
 // callers should warn when doing so, since this permits MITM attacks.
 func HostKeyCallback(knownHostsFile string) (ssh.HostKeyCallback, error) {
 	if knownHostsFile == "" {
-		return ssh.InsecureIgnoreHostKey(), nil //nolint:gosec // explicit opt-out when no known_hosts file is configured
+		return ssh.InsecureIgnoreHostKey(), nil //nolint:gosec // explicit opt-out, see doc comment above
 	}
 
 	cb, err := knownhosts.New(knownHostsFile)
@@ -42,7 +42,7 @@ func HostKeyCallback(knownHostsFile string) (ssh.HostKeyCallback, error) {
 // NewSSHClient creates a new SSH client with password or key authentication.
 // For passphrase-protected keys, pass the passphrase as the password parameter
 // when keyPath is also set. If knownHostsFile is empty, host key verification
-// is skipped (StrictHostKeyChecking=no) and a warning is logged.
+// is skipped (StrictHostKeyChecking=no); callers should warn about this.
 func NewSSHClient(user, password, keyPath, knownHostsFile string) (*SSHClient, error) {
 	var authMethods []ssh.AuthMethod
 
@@ -81,9 +81,6 @@ func NewSSHClient(user, password, keyPath, knownHostsFile string) (*SSHClient, e
 	hostKeyCallback, err := HostKeyCallback(knownHostsFile)
 	if err != nil {
 		return nil, err
-	}
-	if knownHostsFile == "" {
-		log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured) — connections are vulnerable to MITM attacks")
 	}
 
 	config := &ssh.ClientConfig{

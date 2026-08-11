@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -26,6 +27,8 @@ type Client struct {
 	SSHUser     string
 	SSHPassword string
 	SSHOptions  SSHOptions
+
+	knownHostsWarnOnce sync.Once
 }
 
 // UninstallK3S removes k3s from a node
@@ -361,7 +364,9 @@ func (c *Client) sshDial(host string) (*ssh.Client, func(), error) {
 		return nil, nil, err
 	}
 	if c.SSHOptions.KnownHostsFile == "" {
-		log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured) — connections are vulnerable to MITM attacks")
+		c.knownHostsWarnOnce.Do(func() {
+			log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured)")
+		})
 	}
 
 	config := &ssh.ClientConfig{

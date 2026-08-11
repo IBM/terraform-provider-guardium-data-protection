@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -29,6 +30,8 @@ type Client struct {
 	SSHUser     string
 	SSHPassword string
 	SSHOptions  SSHOptions
+
+	knownHostsWarnOnce sync.Once
 }
 
 // SSHOptions holds SSH connection parameters
@@ -74,7 +77,9 @@ func (c *Client) sshDial(host string) (*ssh.Client, func(), error) {
 		return nil, nil, err
 	}
 	if c.SSHOptions.KnownHostsFile == "" {
-		log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured) — connections are vulnerable to MITM attacks")
+		c.knownHostsWarnOnce.Do(func() {
+			log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured)")
+		})
 	}
 
 	config := &ssh.ClientConfig{
