@@ -32,9 +32,10 @@ type Config struct {
 	Platform string // k3s, eks, openshift
 
 	// SSH configuration
-	SSHUser     string
-	SSHPassword string
-	SSHKeyPath  string
+	SSHUser        string
+	SSHPassword    string
+	SSHKeyPath     string
+	KnownHostsFile string // path to known_hosts file for SSH host key verification; leave empty to disable verification
 
 	// AWS EKS
 	AWSRegion           string
@@ -70,7 +71,7 @@ func NewClient(cfg Config) *Client {
 
 	// Initialize SSH client if credentials provided
 	if cfg.SSHUser != "" && (cfg.SSHPassword != "" || cfg.SSHKeyPath != "") {
-		sshClient, err := NewSSHClient(cfg.SSHUser, cfg.SSHPassword, cfg.SSHKeyPath)
+		sshClient, err := NewSSHClient(cfg.SSHUser, cfg.SSHPassword, cfg.SSHKeyPath, cfg.KnownHostsFile)
 		if err == nil {
 			c.sshClient = sshClient
 		}
@@ -530,7 +531,7 @@ func (c *Client) InstallCertsEKS(ctx context.Context, workDir string, registryHo
 	}
 
 	// Create SSH client with EKS-specific credentials (passphrase passed as password)
-	eksSSH, err := NewSSHClient(c.Config.EKSSSHUser, c.Config.EKSSSHKeyPassphrase, c.Config.EKSSSHKeyPath)
+	eksSSH, err := NewSSHClient(c.Config.EKSSSHUser, c.Config.EKSSSHKeyPassphrase, c.Config.EKSSSHKeyPath, c.Config.KnownHostsFile)
 	if err != nil {
 		return fmt.Errorf("failed to create EKS SSH client: %w", err)
 	}

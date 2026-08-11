@@ -46,6 +46,7 @@ ocp_insecure_skip_verify = true
 #   connect_timeout       = 30
 #   server_alive_interval = 10
 #   server_alive_count    = 3
+#   known_hosts_file      = "/path/to/known_hosts" # Verify node SSH host keys; if unset, host key verification is disabled
 # }
 
 # ============================================================================

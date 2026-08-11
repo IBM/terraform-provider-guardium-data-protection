@@ -51,6 +51,7 @@ type guardiumDataProtectionModel struct {
 	K3sConnectTimeout      types.Int64  `tfsdk:"k3s_connect_timeout"`
 	K3sServerAliveInterval types.Int64  `tfsdk:"k3s_server_alive_interval"`
 	K3sServerAliveCount    types.Int64  `tfsdk:"k3s_server_alive_count"`
+	K3sSSHKnownHostsFile   types.String `tfsdk:"k3s_ssh_known_hosts_file"`
 
 	// Rook-Ceph config
 	RookCephSSHUser             types.String `tfsdk:"rook_ceph_ssh_user"`
@@ -58,6 +59,7 @@ type guardiumDataProtectionModel struct {
 	RookCephConnectTimeout      types.Int64  `tfsdk:"rook_ceph_connect_timeout"`
 	RookCephServerAliveInterval types.Int64  `tfsdk:"rook_ceph_server_alive_interval"`
 	RookCephServerAliveCount    types.Int64  `tfsdk:"rook_ceph_server_alive_count"`
+	RookCephSSHKnownHostsFile   types.String `tfsdk:"rook_ceph_ssh_known_hosts_file"`
 
 	// Edge config
 	CMUrl               types.String `tfsdk:"cm_url"`
@@ -66,6 +68,7 @@ type guardiumDataProtectionModel struct {
 	SSHUser             types.String `tfsdk:"ssh_user"`
 	SSHPassword         types.String `tfsdk:"ssh_password"`
 	SSHKeyPath          types.String `tfsdk:"ssh_key_path"`
+	SSHKnownHostsFile   types.String `tfsdk:"ssh_known_hosts_file"`
 	AWSRegion           types.String `tfsdk:"aws_region"`
 	AWSProfile          types.String `tfsdk:"aws_profile"`
 	AWSAccessKey        types.String `tfsdk:"aws_access_key"`
@@ -123,6 +126,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				MarkdownDescription: "SSH keepalive count before disconnect for K3s operations. Defaults to 3.",
 				Optional:            true,
 			},
+			"k3s_ssh_known_hosts_file": schema.StringAttribute{
+				MarkdownDescription: "Path to a known_hosts file used to verify K3s node SSH host keys. Can also be set via K3S_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled and connections are vulnerable to MITM attacks.",
+				Optional:            true,
+			},
 
 			// Rook-Ceph attributes
 			"rook_ceph_ssh_user": schema.StringAttribute{
@@ -144,6 +151,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 			},
 			"rook_ceph_server_alive_count": schema.Int64Attribute{
 				MarkdownDescription: "SSH keepalive count before disconnect for Rook-Ceph operations. Defaults to 3.",
+				Optional:            true,
+			},
+			"rook_ceph_ssh_known_hosts_file": schema.StringAttribute{
+				MarkdownDescription: "Path to a known_hosts file used to verify Rook-Ceph node SSH host keys. Can also be set via ROOK_CEPH_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled and connections are vulnerable to MITM attacks.",
 				Optional:            true,
 			},
 
@@ -172,6 +183,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 			},
 			"ssh_key_path": schema.StringAttribute{
 				MarkdownDescription: "Path to SSH private key file",
+				Optional:            true,
+			},
+			"ssh_known_hosts_file": schema.StringAttribute{
+				MarkdownDescription: "Path to a known_hosts file used to verify edge/EKS node SSH host keys. Can also be set via GDP_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled and connections are vulnerable to MITM attacks.",
 				Optional:            true,
 			},
 			"aws_region": schema.StringAttribute{
@@ -262,6 +277,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 	sshUser := getStringValue(data.SSHUser, "GDP_SSH_USER")
 	sshPassword := getStringValue(data.SSHPassword, "GDP_SSH_PASSWORD")
 	sshKeyPath := getStringValue(data.SSHKeyPath, "GDP_SSH_KEY_PATH")
+	sshKnownHostsFile := getStringValue(data.SSHKnownHostsFile, "GDP_SSH_KNOWN_HOSTS_FILE")
 	awsRegion := getStringValue(data.AWSRegion, "AWS_REGION")
 	awsProfile := getStringValue(data.AWSProfile, "AWS_PROFILE")
 	awsAccessKey := getStringValue(data.AWSAccessKey, "AWS_ACCESS_KEY_ID")
@@ -290,6 +306,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		SSHUser:               sshUser,
 		SSHPassword:           sshPassword,
 		SSHKeyPath:            sshKeyPath,
+		KnownHostsFile:        sshKnownHostsFile,
 		AWSRegion:             awsRegion,
 		AWSProfile:            awsProfile,
 		AWSAccessKey:          awsAccessKey,
@@ -311,6 +328,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		k3sSSHUser = "root"
 	}
 	k3sSSHPassword := getStringValue(data.K3sSSHPassword, "K3S_SSH_PASSWORD")
+	k3sSSHKnownHostsFile := getStringValue(data.K3sSSHKnownHostsFile, "K3S_SSH_KNOWN_HOSTS_FILE")
 
 	k3sConnectTimeout := int(data.K3sConnectTimeout.ValueInt64())
 	if k3sConnectTimeout == 0 {
@@ -331,6 +349,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 			ConnectTimeout:      k3sConnectTimeout,
 			ServerAliveInterval: k3sServerAliveInterval,
 			ServerAliveCount:    k3sServerAliveCount,
+			KnownHostsFile:      k3sSSHKnownHostsFile,
 		})
 	}
 
@@ -340,6 +359,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		rookCephSSHUser = "root"
 	}
 	rookCephSSHPassword := getStringValue(data.RookCephSSHPassword, "ROOK_CEPH_SSH_PASSWORD")
+	rookCephSSHKnownHostsFile := getStringValue(data.RookCephSSHKnownHostsFile, "ROOK_CEPH_SSH_KNOWN_HOSTS_FILE")
 
 	rookCephConnectTimeout := int(data.RookCephConnectTimeout.ValueInt64())
 	if rookCephConnectTimeout == 0 {
@@ -360,6 +380,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 			ConnectTimeout:      rookCephConnectTimeout,
 			ServerAliveInterval: rookCephServerAliveInterval,
 			ServerAliveCount:    rookCephServerAliveCount,
+			KnownHostsFile:      rookCephSSHKnownHostsFile,
 		})
 	}
 

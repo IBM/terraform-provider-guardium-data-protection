@@ -37,9 +37,10 @@ ssh_password = "your-ssh-password"
 
 # Optional SSH connection tuning
 # ssh_options = {
-#   connect_timeout       = 30  # SSH connection timeout in seconds
-#   server_alive_interval = 10  # Interval for keepalive messages
-#   server_alive_count    = 3   # Number of keepalive messages before disconnect
+#   connect_timeout       = 30                  # SSH connection timeout in seconds
+#   server_alive_interval = 10                  # Interval for keepalive messages
+#   server_alive_count    = 3                   # Number of keepalive messages before disconnect
+#   known_hosts_file      = "/path/to/known_hosts" # Verify node SSH host keys; if unset, host key verification is disabled 
 # }
 
 # ============================================================================

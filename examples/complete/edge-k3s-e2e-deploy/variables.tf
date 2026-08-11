@@ -37,6 +37,7 @@ variable "ssh_options" {
     connect_timeout       = optional(number, 30)
     server_alive_interval = optional(number, 10)
     server_alive_count    = optional(number, 3)
+    known_hosts_file      = optional(string, "") # Path to a known_hosts file used to verify node SSH host keys. If unset, host key verification is disabled
   })
   default = {}
 }
