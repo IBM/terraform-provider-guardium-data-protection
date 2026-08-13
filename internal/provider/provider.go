@@ -5,7 +5,11 @@ package provider
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -322,6 +326,24 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		)
 	}
 
+	if cmCertPath != "" {
+		certWarnings, err := validateCMCertificate(cmCertPath)
+		if err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("cm_cert_path"),
+				"Invalid Central Manager certificate",
+				fmt.Sprintf("cm_cert_path %q could not be used: %s", cmCertPath, err),
+			)
+		}
+		for _, w := range certWarnings {
+			resp.Diagnostics.AddAttributeWarning(
+				path.Root("cm_cert_path"),
+				"Central Manager certificate may not be trustworthy",
+				w,
+			)
+		}
+	}
+
 	edgeClient := edgeclient.NewClient(edgeclient.Config{
 		CMUrl:                 cmUrl,
 		OAuthToken:            oauthToken,
@@ -484,6 +506,61 @@ func getBoolValue(v types.Bool, envKey string) bool {
 	}
 	envVal := os.Getenv(envKey)
 	return envVal == "true" || envVal == "1" || envVal == "yes"
+}
+
+// validateCMCertificate reads and parses the PEM certificate(s) at certPath
+func validateCMCertificate(certPath string) ([]string, error) {
+	certPEM, err := os.ReadFile(certPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read certificate file: %w", err)
+	}
+
+	var certs []*x509.Certificate
+	rest := certPEM
+	for {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse certificate: %w", err)
+		}
+		certs = append(certs, cert)
+	}
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("no valid PEM certificate found")
+	}
+
+	var warnings []string
+	now := time.Now()
+	for _, cert := range certs {
+		if now.Before(cert.NotBefore) {
+			warnings = append(warnings, fmt.Sprintf("certificate %q is not valid until %s", cert.Subject, cert.NotBefore.Format(time.RFC3339)))
+		}
+		if now.After(cert.NotAfter) {
+			warnings = append(warnings, fmt.Sprintf("certificate %q expired on %s", cert.Subject, cert.NotAfter.Format(time.RFC3339)))
+		}
+
+		if len(cert.ExtKeyUsage) > 0 {
+			validForServerAuth := false
+			for _, eku := range cert.ExtKeyUsage {
+				if eku == x509.ExtKeyUsageServerAuth || eku == x509.ExtKeyUsageAny {
+					validForServerAuth = true
+					break
+				}
+			}
+			if !validForServerAuth {
+				warnings = append(warnings, fmt.Sprintf("certificate %q does not declare Server Authentication as an extended key usage", cert.Subject))
+			}
+		}
+	}
+
+	return warnings, nil
 }
 
 // Made with Bob

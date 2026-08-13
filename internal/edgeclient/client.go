@@ -104,8 +104,7 @@ func (c *Client) cmTLSConfig() (*tls.Config, error) {
 	}
 
 	return &tls.Config{
-		InsecureSkipVerify: false,
-		RootCAs:            pool,
+		RootCAs: pool,
 	}, nil
 }
 
