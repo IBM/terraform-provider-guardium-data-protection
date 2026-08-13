@@ -39,6 +39,7 @@ provider "guardium-data-protection" {
   # Edge deployment configuration
   cm_url               = var.edge_cm_url
   oauth_token          = var.edge_oauth_token
+  cm_cert_path         = var.edge_cm_cert_path
   platform             = "openshift"
   ssh_user             = var.ocp_ssh_user
   ssh_password         = var.ocp_ssh_password

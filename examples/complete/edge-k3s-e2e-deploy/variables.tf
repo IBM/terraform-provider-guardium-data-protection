@@ -195,6 +195,12 @@ variable "edge_oauth_token" {
   sensitive   = true
 }
 
+variable "edge_cm_cert_path" {
+  description = "Path to a PEM-encoded certificate used to verify the Central Manager's TLS certificate. If unset, TLS certificate verification is disabled."
+  type        = string
+  default     = ""
+}
+
 variable "edge_bundle_directory" {
   description = "Local path to edge bundle directory (alternative to downloading from CM)"
   type        = string

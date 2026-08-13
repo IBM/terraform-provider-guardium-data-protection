@@ -65,6 +65,7 @@ type guardiumDataProtectionModel struct {
 	// Edge config
 	CMUrl               types.String `tfsdk:"cm_url"`
 	OAuthToken          types.String `tfsdk:"oauth_token"`
+	CMCertPath          types.String `tfsdk:"cm_cert_path"`
 	Platform            types.String `tfsdk:"platform"`
 	SSHUser             types.String `tfsdk:"ssh_user"`
 	SSHPassword         types.String `tfsdk:"ssh_password"`
@@ -168,6 +169,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				MarkdownDescription: "OAuth token for authenticating with Central Manager",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"cm_cert_path": schema.StringAttribute{
+				MarkdownDescription: "Path to a PEM-encoded certificate used to verify the Central Manager's TLS certificate. Can also be set via the GDP_CM_CERT_PATH environment variable. If unset, TLS certificate verification is disabled.",
+				Optional:            true,
 			},
 			"platform": schema.StringAttribute{
 				MarkdownDescription: "Target platform: k3s, eks, or openshift",
@@ -274,6 +279,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 	// ===== Edge Client Configuration =====
 	cmUrl := getStringValue(data.CMUrl, "GDP_CM_URL")
 	oauthToken := getStringValue(data.OAuthToken, "GDP_OAUTH_TOKEN")
+	cmCertPath := getStringValue(data.CMCertPath, "GDP_CM_CERT_PATH")
 	platform := getStringValue(data.Platform, "GDP_PLATFORM")
 	sshUser := getStringValue(data.SSHUser, "GDP_SSH_USER")
 	sshPassword := getStringValue(data.SSHPassword, "GDP_SSH_PASSWORD")
@@ -308,9 +314,18 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		)
 	}
 
+	if cmUrl != "" && cmCertPath == "" {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("cm_cert_path"),
+			"Central Manager TLS certificate verification disabled",
+			"No certificate is configured for Central Manager connections, so TLS certificate verification is skipped and connections are vulnerable to MITM attacks. Set cm_cert_path (or the GDP_CM_CERT_PATH environment variable) to a PEM certificate to enable verification.",
+		)
+	}
+
 	edgeClient := edgeclient.NewClient(edgeclient.Config{
 		CMUrl:                 cmUrl,
 		OAuthToken:            oauthToken,
+		CMCertPath:            cmCertPath,
 		Platform:              platform,
 		SSHUser:               sshUser,
 		SSHPassword:           sshPassword,

@@ -87,6 +87,7 @@ install_edge = false  # Set to true to install Edge components
 edge_name        = "my-edge-cluster"
 edge_cm_url      = "https://guardium-insights.example.com"
 edge_oauth_token = "your-oauth-token-here"
+# edge_cm_cert_path = "/path/to/cm-cert.pem"  # Optional: verify CM's TLS certificate. If unset, verification is disabled.
 
 # Option 2: Use local bundle directory (uncomment to use)
 # edge_bundle_directory = "/path/to/local/edge-bundle-directory"
@@ -141,6 +142,7 @@ edge_cleanup_bundle = true  # Cleanup downloaded bundle on destroy
 # edge_name        = "my-edge"
 # edge_cm_url      = "https://guardium-insights.example.com"
 # edge_oauth_token = "your-oauth-token"
+# edge_cm_cert_path = "/path/to/cm-cert.pem"
 
 # ============================================================================
 # Example 4: Rook-Ceph Installation on Existing K3S Cluster
@@ -167,3 +169,4 @@ edge_cleanup_bundle = true  # Cleanup downloaded bundle on destroy
 # edge_name         = "my-edge"
 # edge_cm_url       = "https://guardium-insights.example.com"
 # edge_oauth_token  = "your-oauth-token"
+# edge_cm_cert_path = "/path/to/cm-cert.pem"
