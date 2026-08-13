@@ -334,6 +334,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 				"Invalid Central Manager certificate",
 				fmt.Sprintf("cm_cert_path %q could not be used: %s", cmCertPath, err),
 			)
+			return
 		}
 		for _, w := range certWarnings {
 			resp.Diagnostics.AddAttributeWarning(
