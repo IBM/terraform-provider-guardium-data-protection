@@ -48,11 +48,8 @@ func (c *Client) generateAccessToken(ctx context.Context, httpClient *http.Clien
 		return nil, err
 	}
 
-	queryParams := parsedUrl.Query()
-	queryParams.Set("client_id", clientId)
-	parsedUrl.RawQuery = queryParams.Encode()
-
 	formValues := url.Values{}
+	formValues.Set("client_id", clientId)
 	formValues.Set("client_secret", clientSecret)
 	formValues.Set("password", password)
 	formValues.Set("username", username)
