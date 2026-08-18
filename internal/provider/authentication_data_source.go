@@ -129,7 +129,6 @@ func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.Read
 			return
 		}
 	}
-	tflog.Info(ctx, accessToken)
 	data.AccessToken = types.StringValue(accessToken)
 	resp.State.Set(ctx, data)
 }
