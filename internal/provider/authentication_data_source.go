@@ -106,6 +106,15 @@ type AuthenticationResponse struct {
 }
 
 func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	if d.client == nil {
+		resp.Diagnostics.AddError(
+			"Provider not configured",
+			"The guardium_data_protection_authentication data source requires the provider to be configured with host and port. "+
+				"Set the host and port attributes in the provider block or via the GDP_HOST and GDP_PORT environment variables.",
+		)
+		return
+	}
+
 	var data = new(AuthenticationDataSourceModel)
 	diags := req.Config.Get(ctx, data)
 	resp.Diagnostics.Append(diags...)
