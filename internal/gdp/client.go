@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -47,20 +48,19 @@ func (c *Client) generateAccessToken(ctx context.Context, httpClient *http.Clien
 		return nil, err
 	}
 
-	queryParams := parsedUrl.Query()
-	queryParams.Set("client_id", clientId)
-	queryParams.Set("client_secret", clientSecret)
-	queryParams.Set("password", password)
-	queryParams.Set("username", username)
-	queryParams.Set("grant_type", "password")
+	formValues := url.Values{}
+	formValues.Set("client_id", clientId)
+	formValues.Set("client_secret", clientSecret)
+	formValues.Set("password", password)
+	formValues.Set("username", username)
+	formValues.Set("grant_type", "password")
 
-	parsedUrl.RawQuery = queryParams.Encode()
-	tflog.Info(ctx, "parsed url "+parsedUrl.String())
-	req, err := http.NewRequest("POST", parsedUrl.String(), nil)
+	req, err := http.NewRequest("POST", parsedUrl.String(), strings.NewReader(formValues.Encode()))
 	if err != nil {
 		tflog.Error(ctx, "failed to create new request "+err.Error())
 		return nil, err
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
@@ -348,7 +348,6 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 	registerURL := fmt.Sprintf("%s://%s:%s/restAPI/datasource", c.protocol, c.Host, c.port)
 	tflog.Debug(ctx, "register data source url "+registerURL)
 	tflog.Debug(ctx, fmt.Sprintf("register data source payload %s", string(payload)))
-	tflog.Debug(ctx, fmt.Sprintf("register data source token  %s", accessToken))
 
 	test := make(map[string]interface{})
 	err := json.Unmarshal(payload, &test)
