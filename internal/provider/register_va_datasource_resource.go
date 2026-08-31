@@ -44,7 +44,6 @@ type registerVADatasourceResourceModel struct {
 	ID                 types.String `tfsdk:"id"`
 	AccessToken        types.String `tfsdk:"access_token"`
 	Payload            types.String `tfsdk:"payload"`
-	CAPath             types.String `tfsdk:"ca_path"`
 	LastRegisteredTime types.String `tfsdk:"last_registered_time"`
 }
 
@@ -67,10 +66,6 @@ func (r *registerVADatasourceResource) Schema(ctx context.Context, req resource.
 				MarkdownDescription: "Access token for authentication",
 				Required:            true,
 				Sensitive:           true,
-			},
-			"ca_path": schema.StringAttribute{
-				MarkdownDescription: "Guardium Data Protection certificate authority",
-				Optional:            true,
 			},
 			"last_registered_time": schema.StringAttribute{
 				MarkdownDescription: "Timestamp of the last registration",
