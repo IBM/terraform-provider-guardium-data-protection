@@ -45,9 +45,9 @@ func (s *SecureClient) createSecureHTTPClient() (*http.Client, error) {
 		MinVersion: tls.VersionTLS12, // Enforce minimum TLS 1.2
 	}
 
-	if s.Client.CACertPath != "" {
+	if s.CACertPath != "" {
 		// Load caller-supplied CA certificate
-		caCert, err := os.ReadFile(s.Client.CACertPath)
+		caCert, err := os.ReadFile(s.CACertPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
 		}
