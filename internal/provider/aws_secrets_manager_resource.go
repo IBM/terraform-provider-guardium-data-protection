@@ -130,28 +130,25 @@ func (r *AWSSecretsManagerResource) Create(ctx context.Context, req resource.Cre
 		data.SecretKeyPassword.ValueString(),
 	)
 
-	if data.CaPath.IsNull() {
-		c := r.client.NewInsecureClient()
-
-		// Check if a configuration with this name already exists
-		existingConfig, err := c.GetAWSSecretsManager(ctx, data.AccessToken.ValueString(), data.Name.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError("Error checking for existing AWS Secrets Manager configuration", fmt.Sprintf("Could not check for existing configuration: %s", err))
+	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
+		return
+	}
+	existingConfig, err := c.GetAWSSecretsManager(ctx, data.AccessToken.ValueString(), data.Name.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error checking for existing AWS Secrets Manager configuration", fmt.Sprintf("Could not check for existing configuration: %s", err))
+		return
+	}
+	if existingConfig != nil {
+		if err := c.UpdateAWSSecretsManager(ctx, data.AccessToken.ValueString(), config); err != nil {
+			resp.Diagnostics.AddError("Error updating existing AWS Secrets Manager configuration", fmt.Sprintf("Could not update existing configuration: %s", err))
 			return
 		}
-
-		if existingConfig != nil {
-			// Configuration already exists, update it
-			if err := c.UpdateAWSSecretsManager(ctx, data.AccessToken.ValueString(), config); err != nil {
-				resp.Diagnostics.AddError("Error updating existing AWS Secrets Manager configuration", fmt.Sprintf("Could not update existing configuration: %s", err))
-				return
-			}
-		} else {
-			// Configuration doesn't exist, create it
-			if err := c.CreateAWSSecretsManager(ctx, data.AccessToken.ValueString(), config); err != nil {
-				resp.Diagnostics.AddError("Error creating AWS Secrets Manager configuration", fmt.Sprintf("Could not create configuration: %s", err))
-				return
-			}
+	} else {
+		if err := c.CreateAWSSecretsManager(ctx, data.AccessToken.ValueString(), config); err != nil {
+			resp.Diagnostics.AddError("Error creating AWS Secrets Manager configuration", fmt.Sprintf("Could not create configuration: %s", err))
+			return
 		}
 	}
 
@@ -174,25 +171,22 @@ func (r *AWSSecretsManagerResource) Read(ctx context.Context, req resource.ReadR
 
 	tflog.Info(ctx, "Reading AWS Secrets Manager configuration")
 
-	if data.CaPath.IsNull() {
-		c := r.client.NewInsecureClient()
-		config, err := c.GetAWSSecretsManager(ctx, data.AccessToken.ValueString(), data.Name.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError("Error reading AWS Secrets Manager configuration", fmt.Sprintf("Could not read AWS Secrets Manager configuration: %s", err))
-			return
-		}
-
-		// If the resource doesn't exist, remove it from state
-		if config == nil {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-
-		// Update the data with the values from the API
-		data.Name = types.StringValue(config.Name)
-		data.AuthType = types.StringValue(config.AuthType)
-		// We don't update sensitive fields from the API response
+	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
+		return
 	}
+	config, err := c.GetAWSSecretsManager(ctx, data.AccessToken.ValueString(), data.Name.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading AWS Secrets Manager configuration", fmt.Sprintf("Could not read AWS Secrets Manager configuration: %s", err))
+		return
+	}
+	if config == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	data.Name = types.StringValue(config.Name)
+	data.AuthType = types.StringValue(config.AuthType)
 
 	// Set state
 	diags = resp.State.Set(ctx, &data)
@@ -219,12 +213,14 @@ func (r *AWSSecretsManagerResource) Update(ctx context.Context, req resource.Upd
 		data.SecretKeyPassword.ValueString(),
 	)
 
-	if data.CaPath.IsNull() {
-		c := r.client.NewInsecureClient()
-		if err := c.UpdateAWSSecretsManager(ctx, data.AccessToken.ValueString(), config); err != nil {
-			resp.Diagnostics.AddError("Error updating AWS Secrets Manager configuration", fmt.Sprintf("Could not update AWS Secrets Manager configuration: %s", err))
-			return
-		}
+	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
+		return
+	}
+	if err := c.UpdateAWSSecretsManager(ctx, data.AccessToken.ValueString(), config); err != nil {
+		resp.Diagnostics.AddError("Error updating AWS Secrets Manager configuration", fmt.Sprintf("Could not update AWS Secrets Manager configuration: %s", err))
+		return
 	}
 
 	// Set state
@@ -243,11 +239,13 @@ func (r *AWSSecretsManagerResource) Delete(ctx context.Context, req resource.Del
 
 	tflog.Info(ctx, "Deleting AWS Secrets Manager configuration")
 
-	if data.CaPath.IsNull() {
-		c := r.client.NewInsecureClient()
-		if err := c.DeleteAWSSecretsManager(ctx, data.AccessToken.ValueString(), data.Name.ValueString()); err != nil {
-			resp.Diagnostics.AddError("Error deleting AWS Secrets Manager configuration", fmt.Sprintf("Could not delete AWS Secrets Manager configuration: %s", err))
-			return
-		}
+	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
+		return
+	}
+	if err := c.DeleteAWSSecretsManager(ctx, data.AccessToken.ValueString(), data.Name.ValueString()); err != nil {
+		resp.Diagnostics.AddError("Error deleting AWS Secrets Manager configuration", fmt.Sprintf("Could not delete AWS Secrets Manager configuration: %s", err))
+		return
 	}
 }

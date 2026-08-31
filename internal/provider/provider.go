@@ -42,8 +42,9 @@ type UnifiedClient struct {
 
 type guardiumDataProtectionModel struct {
 	// Original GDP fields
-	Host types.String `tfsdk:"host"`
-	Port types.String `tfsdk:"port"`
+	Host       types.String `tfsdk:"host"`
+	Port       types.String `tfsdk:"port"`
+	CACertPath types.String `tfsdk:"ca_cert_path"`
 
 	// K3s config
 	K3sSSHUser             types.String `tfsdk:"k3s_ssh_user"`
@@ -98,6 +99,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 			},
 			"port": schema.StringAttribute{
 				MarkdownDescription: "The Guardium Data Protection port",
+				Optional:            true,
+			},
+			"ca_cert_path": schema.StringAttribute{
+				MarkdownDescription: "Path to the GDP TLS CA certificate PEM file. Required for self-signed GDP certificates (the default auto-generated certificate). Leave empty to use the OS system trust store (for CA-signed certificates). Can also be set via the GDP_CA_CERT_PATH environment variable.",
 				Optional:            true,
 			},
 
@@ -251,8 +256,10 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 	var gdpClient *gdp.Client
 	host := getStringValue(data.Host, "GDP_HOST")
 	port := getStringValue(data.Port, "GDP_PORT")
+	caCertPath := getStringValue(data.CACertPath, "GDP_CA_CERT_PATH")
 	if host != "" && port != "" {
 		gdpClient = gdp.NewClient(host, port)
+		gdpClient.CACertPath = caCertPath
 	}
 
 	// ===== Edge Client Configuration =====

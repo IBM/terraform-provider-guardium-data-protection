@@ -100,16 +100,15 @@ func (r *ImportProfilesResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	if data.CaPath.IsNull() {
-		c := r.client.NewInsecureClient()
-		testConnections := false
-		if !data.TestConnections.IsNull() {
-			testConnections = data.TestConnections.ValueBool()
-		}
-		if err := c.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections); err != nil {
-			resp.Diagnostics.AddError("Error importing profiles", fmt.Sprintf("Could not import profiles: %s", err))
-			return
-		}
+	testConnections := !data.TestConnections.IsNull() && data.TestConnections.ValueBool()
+	secureClient, err := r.client.NewSecureClient(r.client.CACertPath)
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
+		return
+	}
+	if err := secureClient.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections); err != nil {
+		resp.Diagnostics.AddError("Error importing profiles", fmt.Sprintf("Could not import profiles: %s", err))
+		return
 	}
 
 	// Set a unique ID for the resource
@@ -144,19 +143,15 @@ func (r *ImportProfilesResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	if data.CaPath.IsNull() {
-		c := r.client.NewInsecureClient()
-		testConnections := false
-		if !data.TestConnections.IsNull() {
-			testConnections = data.TestConnections.ValueBool()
-		}
-		if err := c.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections); err != nil {
-			resp.Diagnostics.AddError(
-				"Error importing profiles",
-				fmt.Sprintf("Could not import profiles: %s", err),
-			)
-			return
-		}
+	testConnections := !data.TestConnections.IsNull() && data.TestConnections.ValueBool()
+	secureClient, err := r.client.NewSecureClient(r.client.CACertPath)
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
+		return
+	}
+	if err := secureClient.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections); err != nil {
+		resp.Diagnostics.AddError("Error importing profiles", fmt.Sprintf("Could not import profiles: %s", err))
+		return
 	}
 
 	// Set state

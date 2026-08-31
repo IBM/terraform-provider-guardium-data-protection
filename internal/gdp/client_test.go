@@ -835,15 +835,6 @@ func TestSharedTokenUsageBetweenVAAndUC(t *testing.T) {
 	}
 }
 
-// TestInsecureClientSharedTokenUsage validates that InsecureClient also supports
-// shared token usage between VA and UC paths
-func TestInsecureClientSharedTokenUsage(t *testing.T) {
-	t.Skip("Skipping InsecureClient test - requires TLS server setup")
-	// Note: InsecureClient uses HTTPS protocol and requires proper TLS server setup
-	// This test validates the concept but is skipped in unit tests
-	// Integration tests should cover InsecureClient functionality with real HTTPS endpoints
-}
-
 // TestClientProtocolConfiguration validates that the client correctly uses
 // the protocol setting for different scenarios
 func TestClientProtocolConfiguration(t *testing.T) {

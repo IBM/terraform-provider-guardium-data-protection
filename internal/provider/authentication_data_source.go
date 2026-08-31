@@ -128,15 +128,23 @@ func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.Read
 		err         error
 	)
 
-	if data.CAPath.IsNull() {
-		accessToken, err = d.client.NewInsecureClient().GenerateAccessToken(ctx, data.ClientSecret.ValueString(), data.Username.ValueString(), data.Password.ValueString(), data.ClientID.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to retrieve access token",
-				fmt.Sprintf("Failed to retrieve access token: %s.", err.Error()),
-			)
-			return
-		}
+	// Always use verified TLS. CA cert path is set at provider configure time
+	// via ca_cert_path; empty means the OS system trust store is used.
+	secureClient, scErr := d.client.NewSecureClient(d.client.CACertPath)
+	if scErr != nil {
+		resp.Diagnostics.AddError(
+			"Failed to create secure client",
+			fmt.Sprintf("Failed to create secure client: %s.", scErr.Error()),
+		)
+		return
+	}
+	accessToken, err = secureClient.GenerateAccessToken(ctx, data.ClientSecret.ValueString(), data.Username.ValueString(), data.Password.ValueString(), data.ClientID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to retrieve access token",
+			fmt.Sprintf("Failed to retrieve access token: %s.", err.Error()),
+		)
+		return
 	}
 	data.AccessToken = types.StringValue(accessToken)
 	resp.State.Set(ctx, data)

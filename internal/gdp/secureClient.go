@@ -12,48 +12,56 @@ import (
 	"os"
 )
 
-// NewSecureClient creates a new SecureClient with custom CA certificate
-func (c *Client) NewSecureClient(caCertPath string) (*SecureClient, error) {
-	if caCertPath == "" {
-		return nil, fmt.Errorf("CA certificate path cannot be empty")
-	}
-
-	// Verify CA cert file exists
-	if _, err := os.Stat(caCertPath); err != nil {
-		return nil, fmt.Errorf("CA certificate file not found: %w", err)
+// NewSecureClient creates a SecureClient that always verifies TLS.
+// Pass the CA cert path to pin a specific CA; pass "" to use the OS
+// system trust store (works for GDP appliances whose certificate is
+// signed by a public or IT-managed CA already trusted by the OS).
+// InsecureSkipVerify is never set.
+func (c *Client) NewSecureClient(caPath string) (*SecureClient, error) {
+	// If a path was given, verify the file exists up-front so the error is
+	// clear before any network activity.
+	if caPath != "" {
+		if _, err := os.Stat(caPath); err != nil {
+			return nil, fmt.Errorf("CA certificate file not found: %w", err)
+		}
 	}
 
 	return &SecureClient{
 		Client: Client{
-			Host:     c.Host,
-			port:     c.port,
-			protocol: "https",
+			Host:       c.Host,
+			port:       c.port,
+			protocol:   "https",
+			CACertPath: caPath,
 		},
-		CACertPath: caCertPath,
 	}, nil
 }
 
-// createSecureHTTPClient creates an HTTP client with custom CA certificate
+// createSecureHTTPClient creates an HTTP client with verified TLS.
+// When CACertPath is set the supplied CA is used; otherwise the OS
+// system trust store provides certificate verification.
+// InsecureSkipVerify is never set.
 func (s *SecureClient) createSecureHTTPClient() (*http.Client, error) {
-	// Load CA cert
-	caCert, err := os.ReadFile(s.CACertPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CA certificate: %w", err)
-	}
-
-	// Create cert pool and add CA cert
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCert) {
-		return nil, fmt.Errorf("failed to parse CA certificate")
-	}
-
-	// Create TLS config with custom CA
 	tlsConfig := &tls.Config{
-		RootCAs:    caCertPool,
 		MinVersion: tls.VersionTLS12, // Enforce minimum TLS 1.2
 	}
 
-	// Create HTTP client with secure TLS config
+	if s.Client.CACertPath != "" {
+		// Load caller-supplied CA certificate
+		caCert, err := os.ReadFile(s.Client.CACertPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+		}
+
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to parse CA certificate")
+		}
+
+		tlsConfig.RootCAs = caCertPool
+	}
+	// When CACertPath is empty, tlsConfig.RootCAs stays nil and Go uses
+	// the OS system trust store — certificate validation still occurs.
+
 	return &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsConfig,
