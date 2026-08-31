@@ -415,6 +415,17 @@ func New(version string) func() provider.Provider {
 	}
 }
 
+// resolveCAPath returns the effective CA certificate path to use for a GDP request.
+// Resource-level ca_path takes precedence over the provider-level ca_cert_path,
+// preserving backwards compatibility for callers that set ca_path on the resource.
+// If neither is set, "" is returned and Go uses the OS system trust store.
+func resolveCAPath(resourceCAPath types.String, providerCAPath string) string {
+	if !resourceCAPath.IsNull() && !resourceCAPath.IsUnknown() && resourceCAPath.ValueString() != "" {
+		return resourceCAPath.ValueString()
+	}
+	return providerCAPath
+}
+
 // getStringValue returns the value from types.String or environment variable fallback
 func getStringValue(v types.String, envKey string) string {
 	if !v.IsNull() && !v.IsUnknown() && v.ValueString() != "" {

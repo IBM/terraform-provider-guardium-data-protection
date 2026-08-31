@@ -93,7 +93,7 @@ func (r *InstallConnectorResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	secureClient, err := r.client.NewSecureClient(r.client.CACertPath)
+	secureClient, err := r.client.NewSecureClient(resolveCAPath(data.CAPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return
@@ -135,7 +135,7 @@ func (r *InstallConnectorResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	secureClient, err := r.client.NewSecureClient(r.client.CACertPath)
+	secureClient, err := r.client.NewSecureClient(resolveCAPath(data.CAPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return

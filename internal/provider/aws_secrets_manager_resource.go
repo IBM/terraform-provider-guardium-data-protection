@@ -130,7 +130,7 @@ func (r *AWSSecretsManagerResource) Create(ctx context.Context, req resource.Cre
 		data.SecretKeyPassword.ValueString(),
 	)
 
-	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	c, err := r.client.NewSecureClient(resolveCAPath(data.CaPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return
@@ -171,7 +171,7 @@ func (r *AWSSecretsManagerResource) Read(ctx context.Context, req resource.ReadR
 
 	tflog.Info(ctx, "Reading AWS Secrets Manager configuration")
 
-	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	c, err := r.client.NewSecureClient(resolveCAPath(data.CaPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return
@@ -213,7 +213,7 @@ func (r *AWSSecretsManagerResource) Update(ctx context.Context, req resource.Upd
 		data.SecretKeyPassword.ValueString(),
 	)
 
-	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	c, err := r.client.NewSecureClient(resolveCAPath(data.CaPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return
@@ -239,7 +239,7 @@ func (r *AWSSecretsManagerResource) Delete(ctx context.Context, req resource.Del
 
 	tflog.Info(ctx, "Deleting AWS Secrets Manager configuration")
 
-	c, err := r.client.NewSecureClient(r.client.CACertPath)
+	c, err := r.client.NewSecureClient(resolveCAPath(data.CaPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return

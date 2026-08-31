@@ -101,7 +101,7 @@ func (r *ImportProfilesResource) Create(ctx context.Context, req resource.Create
 	}
 
 	testConnections := !data.TestConnections.IsNull() && data.TestConnections.ValueBool()
-	secureClient, err := r.client.NewSecureClient(r.client.CACertPath)
+	secureClient, err := r.client.NewSecureClient(resolveCAPath(data.CaPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return
@@ -144,7 +144,7 @@ func (r *ImportProfilesResource) Update(ctx context.Context, req resource.Update
 	}
 
 	testConnections := !data.TestConnections.IsNull() && data.TestConnections.ValueBool()
-	secureClient, err := r.client.NewSecureClient(r.client.CACertPath)
+	secureClient, err := r.client.NewSecureClient(resolveCAPath(data.CaPath, r.client.CACertPath))
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating secure client", fmt.Sprintf("Could not create secure client: %s", err))
 		return

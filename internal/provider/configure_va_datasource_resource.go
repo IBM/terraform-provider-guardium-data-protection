@@ -148,7 +148,7 @@ func (r *configureVADatasourceResource) Create(ctx context.Context, req resource
 		return
 	}
 
-	secureClient, scErr := r.client.NewSecureClient(r.client.CACertPath)
+	secureClient, scErr := r.client.NewSecureClient(resolveCAPath(data.CAPath, r.client.CACertPath))
 	if scErr != nil {
 		resp.Diagnostics.AddError("Failed to create secure client", fmt.Sprintf("Failed to create secure client: %s.", scErr.Error()))
 		return
@@ -214,7 +214,7 @@ func (r *configureVADatasourceResource) Update(ctx context.Context, req resource
 		return
 	}
 
-	secureClient, scErr := r.client.NewSecureClient(r.client.CACertPath)
+	secureClient, scErr := r.client.NewSecureClient(resolveCAPath(data.CAPath, r.client.CACertPath))
 	if scErr != nil {
 		resp.Diagnostics.AddError("Failed to create secure client", fmt.Sprintf("Failed to create secure client: %s.", scErr.Error()))
 		return

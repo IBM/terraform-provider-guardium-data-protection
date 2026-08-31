@@ -128,9 +128,9 @@ func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.Read
 		err         error
 	)
 
-	// Always use verified TLS. CA cert path is set at provider configure time
-	// via ca_cert_path; empty means the OS system trust store is used.
-	secureClient, scErr := d.client.NewSecureClient(d.client.CACertPath)
+	// Resource-level ca_path takes precedence over provider-level ca_cert_path
+	// for backwards compatibility; empty means the OS system trust store is used.
+	secureClient, scErr := d.client.NewSecureClient(resolveCAPath(data.CAPath, d.client.CACertPath))
 	if scErr != nil {
 		resp.Diagnostics.AddError(
 			"Failed to create secure client",
