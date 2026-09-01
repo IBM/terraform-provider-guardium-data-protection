@@ -27,7 +27,8 @@ type Client struct {
 
 type SecureClient struct {
 	Client
-	CACertPath string
+	CACertPath    string
+	fetchedCACert []byte // PEM bytes auto-fetched from the server when CACertPath is empty
 }
 
 func NewClient(host, port string) *Client {
@@ -363,7 +364,7 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 	tflog.Debug(ctx, "string(payloadJson)")
 	tflog.Debug(ctx, string(payloadJson))
 
-	tflog.Debug(ctx, fmt.Sprintf("json output "+string(payloadJson)))
+	tflog.Debug(ctx, "json output "+string(payloadJson))
 	// Create the HTTP request
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", registerURL, bytes.NewReader(payloadJson))
 	if err != nil {

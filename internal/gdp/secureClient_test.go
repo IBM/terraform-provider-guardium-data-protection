@@ -22,6 +22,7 @@ import (
 	"time"
 )
 
+
 // createTestCACert generates ephemeral test certificates for unit testing only.
 // These keys are generated dynamically at test runtime and never stored or used
 // for real authentication. They exist only in memory during test execution.
@@ -91,7 +92,7 @@ func TestNewSecureClient(t *testing.T) {
 		expectedProtocol string
 	}{
 		{
-			name:             "Valid secure client creation",
+			name:             "Valid secure client creation with CA file",
 			host:             "guardium.example.com",
 			port:             "8443",
 			createCert:       true,
@@ -99,12 +100,12 @@ func TestNewSecureClient(t *testing.T) {
 			expectedProtocol: "https",
 		},
 		{
-			name:        "Empty CA cert path",
-			host:        "localhost",
+			name:        "Empty CA cert path triggers auto-fetch — unreachable host fails",
+			host:        "unreachable.invalid.host",
 			port:        "8443",
 			caCertPath:  "",
 			createCert:  false,
-			expectError: true,
+			expectError: true, // auto-fetch dials the host; unreachable → error
 		},
 		{
 			name:        "Non-existent CA cert file",
@@ -624,4 +625,87 @@ func TestSecureClient_ErrorHandling(t *testing.T) {
 			t.Error("Expected error for unreachable server, got nil")
 		}
 	})
+}
+
+// TestFetchServerCACert validates FetchServerCACert against a real TLS test server.
+func TestFetchServerCACert(t *testing.T) {
+	_, caCert, caKey := createTestCACert(t)
+	serverCert := createServerCert(t, caCert, caKey)
+
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	server.TLS = &tls.Config{
+		Certificates: []tls.Certificate{*serverCert},
+	}
+	server.StartTLS()
+	defer server.Close()
+
+	serverURL := strings.TrimPrefix(server.URL, "https://")
+	parts := strings.Split(serverURL, ":")
+	host, port := parts[0], parts[1]
+
+	t.Run("Fetches PEM from live server", func(t *testing.T) {
+		pemBytes, err := FetchServerCACert(host, port)
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		if len(pemBytes) == 0 {
+			t.Fatal("Expected non-empty PEM, got empty")
+		}
+		// Confirm we got a valid certificate block.
+		block, _ := pem.Decode(pemBytes)
+		if block == nil || block.Type != "CERTIFICATE" {
+			t.Errorf("Expected CERTIFICATE PEM block, got: %v", block)
+		}
+	})
+
+	t.Run("Unreachable host returns error", func(t *testing.T) {
+		_, err := FetchServerCACert("unreachable.invalid.host", "8443")
+		if err == nil {
+			t.Error("Expected error for unreachable host, got nil")
+		}
+	})
+}
+
+// TestNewSecureClient_AutoFetch validates that NewSecureClient auto-fetches the CA
+// when caCertPath is empty and uses it for subsequent verified connections.
+func TestNewSecureClient_AutoFetch(t *testing.T) {
+	_, caCert, caKey := createTestCACert(t)
+	serverCert := createServerCert(t, caCert, caKey)
+
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write([]byte(`{"access_token":"auto-fetched-token"}`)); err != nil {
+			t.Errorf("Failed to write response: %v", err)
+		}
+	}))
+	server.TLS = &tls.Config{
+		Certificates: []tls.Certificate{*serverCert},
+	}
+	server.StartTLS()
+	defer server.Close()
+
+	serverURL := strings.TrimPrefix(server.URL, "https://")
+	parts := strings.Split(serverURL, ":")
+	host, port := parts[0], parts[1]
+
+	baseClient := NewClient(host, port)
+	// Empty caCertPath — provider should auto-fetch from the server.
+	secureClient, err := baseClient.NewSecureClient("")
+	if err != nil {
+		t.Fatalf("NewSecureClient with empty path should auto-fetch, got error: %v", err)
+	}
+	if len(secureClient.fetchedCACert) == 0 {
+		t.Fatal("Expected fetchedCACert to be populated after auto-fetch")
+	}
+
+	ctx := context.Background()
+	token, err := secureClient.GenerateAccessToken(ctx, "secret", "user", "pass", "client")
+	if err != nil {
+		t.Errorf("Expected successful token generation with auto-fetched CA, got: %v", err)
+	}
+	if token != "auto-fetched-token" {
+		t.Errorf("Expected token 'auto-fetched-token', got '%s'", token)
+	}
 }

@@ -123,20 +123,22 @@ func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	var (
-		accessToken string
-		err         error
-	)
+	secureClient, err := d.client.NewSecureClient(data.CAPath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to initialise secure TLS client",
+			fmt.Sprintf("Failed to initialise secure TLS client: %s.", err.Error()),
+		)
+		return
+	}
 
-	if data.CAPath.IsNull() {
-		accessToken, err = d.client.NewInsecureClient().GenerateAccessToken(ctx, data.ClientSecret.ValueString(), data.Username.ValueString(), data.Password.ValueString(), data.ClientID.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to retrieve access token",
-				fmt.Sprintf("Failed to retrieve access token: %s.", err.Error()),
-			)
-			return
-		}
+	accessToken, err := secureClient.GenerateAccessToken(ctx, data.ClientSecret.ValueString(), data.Username.ValueString(), data.Password.ValueString(), data.ClientID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to retrieve access token",
+			fmt.Sprintf("Failed to retrieve access token: %s.", err.Error()),
+		)
+		return
 	}
 	data.AccessToken = types.StringValue(accessToken)
 	resp.State.Set(ctx, data)

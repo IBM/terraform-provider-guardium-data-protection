@@ -93,17 +93,17 @@ func (r *InstallConnectorResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	if data.CAPath.IsNull() {
-
-		// Make the API call to install connector
-		err := r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error installing connector",
-				fmt.Sprintf("Could not install connector: %s", err),
-			)
-			return
-		}
+	secureClient, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
+		return
+	}
+	if err := secureClient.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString()); err != nil {
+		resp.Diagnostics.AddError(
+			"Error installing connector",
+			fmt.Sprintf("Could not install connector: %s", err),
+		)
+		return
 	}
 
 	// Set a unique ID for the resource
@@ -138,13 +138,14 @@ func (r *InstallConnectorResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	if data.CAPath.IsNull() {
-		// Make the API call to install connector
-		err := r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError("Error installing connector", fmt.Sprintf("Could not install connector: %s", err))
-			return
-		}
+	secureClient2, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
+		return
+	}
+	if err := secureClient2.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString()); err != nil {
+		resp.Diagnostics.AddError("Error installing connector", fmt.Sprintf("Could not install connector: %s", err))
+		return
 	}
 
 	// Set state

@@ -131,15 +131,17 @@ func (r *registerVADatasourceResource) Create(ctx context.Context, req resource.
 		}
 	}
 
-	if data.CAPath.IsNull() {
-		err := r.client.NewInsecureClient().RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(payload))
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to register va",
-				fmt.Sprintf("Failed to register va: %s.", err.Error()),
-			)
-			return
-		}
+	secureClient, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", err.Error()))
+		return
+	}
+	if err := secureClient.RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(payload)); err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to register va",
+			fmt.Sprintf("Failed to register va: %s.", err.Error()),
+		)
+		return
 	}
 
 	// Set computed values
@@ -198,15 +200,17 @@ func (r *registerVADatasourceResource) Update(ctx context.Context, req resource.
 		}
 	}
 
-	if data.CAPath.IsNull() {
-		err := r.client.NewInsecureClient().RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(payload))
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to register va",
-				fmt.Sprintf("Failed to register va: %s.", err.Error()),
-			)
-			return
-		}
+	secureClient2, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", err.Error()))
+		return
+	}
+	if err := secureClient2.RegisterVADataSource(ctx, data.AccessToken.ValueString(), []byte(payload)); err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to register va",
+			fmt.Sprintf("Failed to register va: %s.", err.Error()),
+		)
+		return
 	}
 
 	// Set computed values
