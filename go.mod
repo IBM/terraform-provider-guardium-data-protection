@@ -12,7 +12,7 @@ require (
 	github.com/go-git/go-git/v5 v5.17.0
 	github.com/hashicorp/terraform-plugin-framework v1.18.0
 	github.com/hashicorp/terraform-plugin-log v0.10.0
-	github.com/openshift/api v0.0.0-20260312224012-5e946e2d43b7
+	github.com/openshift/api 81278704edb0
 	github.com/openshift/client-go v0.0.0-20260306160707-3935d929fc7d
 	github.com/pkg/sftp v1.13.10
 	golang.org/x/crypto v0.46.0
