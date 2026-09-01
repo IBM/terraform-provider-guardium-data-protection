@@ -22,7 +22,6 @@ import (
 	"time"
 )
 
-
 // createTestCACert generates ephemeral test certificates for unit testing only.
 // These keys are generated dynamically at test runtime and never stored or used
 // for real authentication. They exist only in memory during test execution.
