@@ -156,15 +156,17 @@ func (r *configureVANotificationsResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	if data.CAPath.IsNull() {
-		err = r.client.NewInsecureClient().ConfigureVANotifications(ctx, data.AccessToken.ValueString(), payload)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to register va",
-				fmt.Sprintf("Failed to register va: %s.", err.Error()),
-			)
-			return
-		}
+	secureClient, scErr := r.client.NewSecureClient(data.CAPath.ValueString())
+	if scErr != nil {
+		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", scErr.Error()))
+		return
+	}
+	if err = secureClient.ConfigureVANotifications(ctx, data.AccessToken.ValueString(), payload); err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to register va",
+			fmt.Sprintf("Failed to register va: %s.", err.Error()),
+		)
+		return
 	}
 
 	// Set computed values
@@ -227,15 +229,17 @@ func (r *configureVANotificationsResource) Update(ctx context.Context, req resou
 		return
 	}
 
-	if data.CAPath.IsNull() {
-		err = r.client.NewInsecureClient().ConfigureVANotifications(ctx, data.AccessToken.ValueString(), payload)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to register va",
-				fmt.Sprintf("Failed to register va: %s.", err.Error()),
-			)
-			return
-		}
+	secureClient2, scErr2 := r.client.NewSecureClient(data.CAPath.ValueString())
+	if scErr2 != nil {
+		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", scErr2.Error()))
+		return
+	}
+	if err = secureClient2.ConfigureVANotifications(ctx, data.AccessToken.ValueString(), payload); err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to register va",
+			fmt.Sprintf("Failed to register va: %s.", err.Error()),
+		)
+		return
 	}
 
 	// Set computed values
