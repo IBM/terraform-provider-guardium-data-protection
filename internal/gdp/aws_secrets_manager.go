@@ -166,7 +166,7 @@ func (c *Client) GetAllAWSSecretsManagerConfigs(ctx context.Context, httpClient 
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager response body: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager response body received", map[string]any{"length": len(body)})
 
 	// Try to unmarshal as an array
 	var configs []struct {

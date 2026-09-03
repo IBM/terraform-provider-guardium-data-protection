@@ -122,7 +122,7 @@ func (r *registerVADatasourceResource) Create(ctx context.Context, req resource.
 	if payload[0] == '"' {
 		payload, err = strconv.Unquote(data.Payload.ValueString())
 		if err != nil {
-			tflog.Info(ctx, fmt.Sprintf("payload %s", data.Payload.ValueString()))
+			tflog.Debug(ctx, "failed to unquote payload")
 			resp.Diagnostics.AddError(
 				"Failed to unquote payload",
 				fmt.Sprintf("Failed to unquote payload: %s.", err.Error()),
@@ -191,7 +191,7 @@ func (r *registerVADatasourceResource) Update(ctx context.Context, req resource.
 	if payload[0] == '"' {
 		payload, err = strconv.Unquote(data.Payload.ValueString())
 		if err != nil {
-			tflog.Info(ctx, fmt.Sprintf("payload %s", data.Payload.ValueString()))
+			tflog.Debug(ctx, "failed to unquote payload")
 			resp.Diagnostics.AddError(
 				"Failed to unquote payload",
 				fmt.Sprintf("Failed to unquote payload: %s.", err.Error()),
