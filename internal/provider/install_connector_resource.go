@@ -93,7 +93,7 @@ func (r *InstallConnectorResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	secureClient, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	secureClient, err := r.client.NewSecureClient(ctx, data.CAPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return
@@ -138,7 +138,7 @@ func (r *InstallConnectorResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	secureClient2, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	secureClient2, err := r.client.NewSecureClient(ctx, data.CAPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return

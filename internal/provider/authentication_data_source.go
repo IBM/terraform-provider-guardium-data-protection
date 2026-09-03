@@ -123,7 +123,7 @@ func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	secureClient, err := d.client.NewSecureClient(data.CAPath.ValueString())
+	secureClient, err := d.client.NewSecureClient(ctx, data.CAPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to initialise secure TLS client",

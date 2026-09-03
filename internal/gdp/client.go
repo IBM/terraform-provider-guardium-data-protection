@@ -191,8 +191,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 
 	tflog.Info(ctx, "Received response", map[string]any{
-		"statusCode":   resp.StatusCode,
-		"responseBody": string(responseBody),
+		"statusCode": resp.StatusCode,
 	})
 
 	// Check the response status
@@ -204,11 +203,8 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	var apiResponse ImportProfilesFromFileResponse
 	if err := json.Unmarshal(responseBody, &apiResponse); err != nil {
 		tflog.Warn(ctx, "failed to parse import profiles response, continuing anyway: "+err.Error())
-		tflog.Debug(ctx, "sent request to import profiles from file response "+string(responseBody))
 		return nil
 	}
-
-	tflog.Debug(ctx, "sent request to import profiles from file response "+string(responseBody))
 
 	// Check for ErrorCode and ErrorMessage fields (API returns HTTP 200 even for errors)
 	if apiResponse.ErrorCode != "" && apiResponse.ErrorCode != "0" {
@@ -279,7 +275,6 @@ func (c *Client) BulkInstallConnector(ctx context.Context, httpClient *http.Clie
 		return fmt.Errorf("error marshaling request body: %w", err)
 	}
 	tflog.Debug(ctx, "parsed install connector url "+bulkInstallUrl)
-	tflog.Debug(ctx, "parsed install connector body "+string(jsonBody))
 
 	// Create the HTTP request
 	req, err := http.NewRequest("POST", bulkInstallUrl, bytes.NewBuffer(jsonBody))
@@ -307,7 +302,6 @@ func (c *Client) BulkInstallConnector(ctx context.Context, httpClient *http.Clie
 	parsedBody := new(bulkInstallConnectorResponse)
 	if err = json.Unmarshal(body, parsedBody); err != nil {
 		tflog.Warn(ctx, "failed to parse bulk install response, continuing anyway: "+err.Error())
-		tflog.Debug(ctx, "install connector response "+string(body))
 		return nil
 	}
 
@@ -331,7 +325,6 @@ func (c *Client) BulkInstallConnector(ctx context.Context, httpClient *http.Clie
 		return fmt.Errorf("bulk install failed: %s", parsedBody.Message)
 	}
 
-	tflog.Debug(ctx, "install connector response "+string(body))
 	return nil
 }
 
@@ -348,7 +341,6 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 	// Create the request URL
 	registerURL := fmt.Sprintf("%s://%s:%s/restAPI/datasource", c.protocol, c.Host, c.port)
 	tflog.Debug(ctx, "register data source url "+registerURL)
-	tflog.Debug(ctx, fmt.Sprintf("register data source payload %s", string(payload)))
 
 	test := make(map[string]interface{})
 	err := json.Unmarshal(payload, &test)
@@ -361,10 +353,6 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 		panic(err)
 	}
 
-	tflog.Debug(ctx, "string(payloadJson)")
-	tflog.Debug(ctx, string(payloadJson))
-
-	tflog.Debug(ctx, "json output "+string(payloadJson))
 	// Create the HTTP request
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", registerURL, bytes.NewReader(payloadJson))
 	if err != nil {
@@ -390,12 +378,10 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 		tflog.Error(ctx, fmt.Sprintf("Could not read response body: %s", err))
 		return err
 	}
-	tflog.Debug(ctx, "register data source response "+string(body))
-
 	// Parse the response to check for errors
 	var apiResp RegisterDatasourceResponse
 	if err := json.Unmarshal(body, &apiResp); err != nil {
-		tflog.Error(ctx, fmt.Sprintf("Could not parse response JSON: %s. Body: %s", err, string(body)))
+		tflog.Error(ctx, fmt.Sprintf("Could not parse response JSON: %s", err))
 		return fmt.Errorf("failed to parse API response: %w", err)
 	}
 
