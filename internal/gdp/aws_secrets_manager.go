@@ -72,7 +72,7 @@ func (c *Client) CreateAWSSecretsManager(ctx context.Context, httpClient *http.C
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager create response: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager create response received", map[string]any{"statusCode": resp.StatusCode})
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (c *Client) UpdateAWSSecretsManager(ctx context.Context, httpClient *http.C
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager update response: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager update response received", map[string]any{"statusCode": resp.StatusCode})
 	return nil
 }
 
@@ -265,6 +265,6 @@ func (c *Client) DeleteAWSSecretsManager(ctx context.Context, httpClient *http.C
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager delete response: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager delete response received", map[string]any{"statusCode": resp.StatusCode})
 	return nil
 }

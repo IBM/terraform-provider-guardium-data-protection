@@ -191,8 +191,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 
 	tflog.Info(ctx, "Received response", map[string]any{
-		"statusCode":   resp.StatusCode,
-		"responseBody": string(responseBody),
+		"statusCode": resp.StatusCode,
 	})
 
 	// Check the response status
@@ -348,7 +347,6 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 	// Create the request URL
 	registerURL := fmt.Sprintf("%s://%s:%s/restAPI/datasource", c.protocol, c.Host, c.port)
 	tflog.Debug(ctx, "register data source url "+registerURL)
-	tflog.Debug(ctx, fmt.Sprintf("register data source payload %s", string(payload)))
 
 	test := make(map[string]interface{})
 	err := json.Unmarshal(payload, &test)
@@ -361,10 +359,6 @@ func (c *Client) RegisterVADataSource(ctx context.Context, httpClient *http.Clie
 		panic(err)
 	}
 
-	tflog.Debug(ctx, "string(payloadJson)")
-	tflog.Debug(ctx, string(payloadJson))
-
-	tflog.Debug(ctx, "json output "+string(payloadJson))
 	// Create the HTTP request
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", registerURL, bytes.NewReader(payloadJson))
 	if err != nil {
