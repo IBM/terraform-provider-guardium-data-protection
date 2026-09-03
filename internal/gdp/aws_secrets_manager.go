@@ -48,7 +48,6 @@ func (c *Client) CreateAWSSecretsManager(ctx context.Context, httpClient *http.C
 	}
 
 	tflog.Debug(ctx, "AWS Secrets Manager create request URL: "+url)
-	tflog.Debug(ctx, "AWS Secrets Manager create request body: "+string(jsonBody))
 
 	// Create the request - use POST for creating new configurations
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
@@ -89,7 +88,6 @@ func (c *Client) UpdateAWSSecretsManager(ctx context.Context, httpClient *http.C
 	}
 
 	tflog.Debug(ctx, "AWS Secrets Manager update request URL: "+url)
-	tflog.Debug(ctx, "AWS Secrets Manager update request body: "+string(jsonBody))
 
 	// Create the request - use PUT for updating existing configurations
 	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewBuffer(jsonBody))
@@ -243,7 +241,6 @@ func (c *Client) DeleteAWSSecretsManager(ctx context.Context, httpClient *http.C
 	}
 
 	tflog.Debug(ctx, "AWS Secrets Manager delete request URL: "+url)
-	tflog.Debug(ctx, "AWS Secrets Manager delete request body: "+string(jsonBody))
 
 	// Create the request
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, bytes.NewBuffer(jsonBody))
