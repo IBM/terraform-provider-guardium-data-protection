@@ -156,7 +156,7 @@ func (r *configureVANotificationsResource) Create(ctx context.Context, req resou
 		return
 	}
 
-	secureClient, scErr := r.client.NewSecureClient(data.CAPath.ValueString())
+	secureClient, scErr := r.client.NewSecureClient(ctx, data.CAPath.ValueString())
 	if scErr != nil {
 		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", scErr.Error()))
 		return
@@ -229,7 +229,7 @@ func (r *configureVANotificationsResource) Update(ctx context.Context, req resou
 		return
 	}
 
-	secureClient2, scErr2 := r.client.NewSecureClient(data.CAPath.ValueString())
+	secureClient2, scErr2 := r.client.NewSecureClient(ctx, data.CAPath.ValueString())
 	if scErr2 != nil {
 		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", scErr2.Error()))
 		return

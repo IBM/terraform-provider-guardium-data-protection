@@ -127,7 +127,7 @@ func TestNewSecureClient(t *testing.T) {
 				caCertPath = tc.caCertPath
 			}
 
-			secureClient, err := baseClient.NewSecureClient(caCertPath)
+			secureClient, err := baseClient.NewSecureClient(context.Background(), caCertPath)
 
 			if tc.expectError {
 				if err == nil {
@@ -203,7 +203,7 @@ func TestSecureClient_ProtocolEnforcement(t *testing.T) {
 				protocol: tc.initialProtocol,
 			}
 
-			secureClient, err := baseClient.NewSecureClient(caCertPath)
+			secureClient, err := baseClient.NewSecureClient(context.Background(), caCertPath)
 			if err != nil {
 				t.Fatalf("Failed to create secure client: %v", err)
 			}
@@ -276,7 +276,7 @@ func TestSecureClient_CertificateValidation(t *testing.T) {
 			Host: host,
 			port: port,
 		}
-		secureClient, err := baseClient.NewSecureClient(caCertPath)
+		secureClient, err := baseClient.NewSecureClient(context.Background(), caCertPath)
 		if err != nil {
 			t.Fatalf("Failed to create secure client: %v", err)
 		}
@@ -332,7 +332,7 @@ MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF0K3j8v8rR0Jx8nQJc8pjZJ0Z3VS
 			tmpFile.Close()
 
 			baseClient := NewClient("localhost", "8443")
-			secureClient, err := baseClient.NewSecureClient(tmpFile.Name())
+			secureClient, err := baseClient.NewSecureClient(context.Background(), tmpFile.Name())
 
 			if err != nil {
 				// Error during creation is acceptable
@@ -420,7 +420,7 @@ func TestSecureClient_GenerateAccessToken(t *testing.T) {
 				Host: host,
 				port: port,
 			}
-			secureClient, err := baseClient.NewSecureClient(caCertPath)
+			secureClient, err := baseClient.NewSecureClient(context.Background(), caCertPath)
 			if err != nil {
 				t.Fatalf("Failed to create secure client: %v", err)
 			}
@@ -550,7 +550,7 @@ func TestSecureClient_AllOperations(t *testing.T) {
 		Host: host,
 		port: port,
 	}
-	secureClient, err := baseClient.NewSecureClient(caCertPath)
+	secureClient, err := baseClient.NewSecureClient(context.Background(), caCertPath)
 	if err != nil {
 		t.Fatalf("Failed to create secure client: %v", err)
 	}
@@ -612,7 +612,7 @@ func TestSecureClient_ErrorHandling(t *testing.T) {
 			Host: "unreachable.invalid.host",
 			port: "8443",
 		}
-		secureClient, err := baseClient.NewSecureClient(caCertPath)
+		secureClient, err := baseClient.NewSecureClient(context.Background(), caCertPath)
 		if err != nil {
 			t.Fatalf("Failed to create secure client: %v", err)
 		}
@@ -691,7 +691,7 @@ func TestNewSecureClient_AutoFetch(t *testing.T) {
 
 	baseClient := NewClient(host, port)
 	// Empty caCertPath — provider should auto-fetch from the server.
-	secureClient, err := baseClient.NewSecureClient("")
+	secureClient, err := baseClient.NewSecureClient(context.Background(), "")
 	if err != nil {
 		t.Fatalf("NewSecureClient with empty path should auto-fetch, got error: %v", err)
 	}

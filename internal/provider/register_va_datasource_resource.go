@@ -131,7 +131,7 @@ func (r *registerVADatasourceResource) Create(ctx context.Context, req resource.
 		}
 	}
 
-	secureClient, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	secureClient, err := r.client.NewSecureClient(ctx, data.CAPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", err.Error()))
 		return
@@ -200,7 +200,7 @@ func (r *registerVADatasourceResource) Update(ctx context.Context, req resource.
 		}
 	}
 
-	secureClient2, err := r.client.NewSecureClient(data.CAPath.ValueString())
+	secureClient2, err := r.client.NewSecureClient(ctx, data.CAPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to initialise secure TLS client", fmt.Sprintf("Failed to initialise secure TLS client: %s.", err.Error()))
 		return

@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // NewSecureClient creates a new SecureClient with verified TLS.
@@ -23,15 +25,17 @@ import (
 //
 // A non-empty path that does not exist on disk is rejected immediately so
 // configuration errors surface before any network call is attempted.
-func (c *Client) NewSecureClient(caCertPath string) (*SecureClient, error) {
+func (c *Client) NewSecureClient(ctx context.Context, caCertPath string) (*SecureClient, error) {
 	var fetchedCACert []byte
 
 	if caCertPath != "" {
+		tflog.Info(ctx, "SecureClient: using operator-supplied CA cert", map[string]any{"ca_path": caCertPath, "host": c.Host})
 		// Verify CA cert file exists up-front so operators get a clear error.
 		if _, err := os.Stat(caCertPath); err != nil {
 			return nil, fmt.Errorf("CA certificate file not found: %w", err)
 		}
 	} else {
+		tflog.Info(ctx, "SecureClient: no ca_path supplied, auto-fetching server cert", map[string]any{"host": c.Host})
 		// No path provided — fetch the server's certificate chain automatically.
 		cert, err := FetchServerCACert(c.Host, c.port)
 		if err != nil {

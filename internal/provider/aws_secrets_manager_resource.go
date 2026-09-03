@@ -130,7 +130,7 @@ func (r *AWSSecretsManagerResource) Create(ctx context.Context, req resource.Cre
 		data.SecretKeyPassword.ValueString(),
 	)
 
-	secureClient, err := r.client.NewSecureClient(data.CaPath.ValueString())
+	secureClient, err := r.client.NewSecureClient(ctx, data.CaPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return
@@ -176,7 +176,7 @@ func (r *AWSSecretsManagerResource) Read(ctx context.Context, req resource.ReadR
 
 	tflog.Info(ctx, "Reading AWS Secrets Manager configuration")
 
-	secureClientRead, err := r.client.NewSecureClient(data.CaPath.ValueString())
+	secureClientRead, err := r.client.NewSecureClient(ctx, data.CaPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return
@@ -223,7 +223,7 @@ func (r *AWSSecretsManagerResource) Update(ctx context.Context, req resource.Upd
 		data.SecretKeyPassword.ValueString(),
 	)
 
-	secureClientUpdate, err := r.client.NewSecureClient(data.CaPath.ValueString())
+	secureClientUpdate, err := r.client.NewSecureClient(ctx, data.CaPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return
@@ -249,7 +249,7 @@ func (r *AWSSecretsManagerResource) Delete(ctx context.Context, req resource.Del
 
 	tflog.Info(ctx, "Deleting AWS Secrets Manager configuration")
 
-	secureClientDelete, err := r.client.NewSecureClient(data.CaPath.ValueString())
+	secureClientDelete, err := r.client.NewSecureClient(ctx, data.CaPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return

@@ -100,7 +100,7 @@ func (r *ImportProfilesResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	secureClient, err := r.client.NewSecureClient(data.CaPath.ValueString())
+	secureClient, err := r.client.NewSecureClient(ctx, data.CaPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return
@@ -146,7 +146,7 @@ func (r *ImportProfilesResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	secureClient2, err := r.client.NewSecureClient(data.CaPath.ValueString())
+	secureClient2, err := r.client.NewSecureClient(ctx, data.CaPath.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
 		return
