@@ -46,6 +46,7 @@ ocp_insecure_skip_verify = true
 #   connect_timeout       = 30
 #   server_alive_interval = 10
 #   server_alive_count    = 3
+#   known_hosts_file      = "/path/to/known_hosts" # Verify node SSH host keys; if unset, host key verification is disabled
 # }
 
 # ============================================================================
@@ -74,6 +75,7 @@ install_edge = false  # Set to true to install Edge components
 edge_name        = "my-edge"
 edge_cm_url      = "https://gi-cm.example.com"
 edge_oauth_token = "your-oauth-token"
+# edge_cm_cert_path = "/path/to/cm-cert.pem"  # Optional: verify CM's TLS certificate. If unset, verification is disabled.
 
 # Option 2: Use local bundle directory
 # edge_bundle_directory = "/path/to/local/edge-bundle-directory"
@@ -129,6 +131,7 @@ edge_cleanup_bundle = true
 # edge_name               = "my-edge"
 # edge_cm_url             = "https://gi-cm.example.com"
 # edge_oauth_token        = "your-oauth-token"
+# edge_cm_cert_path       = "/path/to/cm-cert.pem"
 
 # ============================================================================
 # Example 3: Complete Stack (Rook-Ceph + Edge)
@@ -146,3 +149,4 @@ edge_cleanup_bundle = true
 # edge_name               = "my-edge"
 # edge_cm_url             = "https://gi-cm.example.com"
 # edge_oauth_token        = "your-oauth-token"
+# edge_cm_cert_path       = "/path/to/cm-cert.pem"

@@ -75,6 +75,17 @@ install_rook_ceph = false
 install_edge      = false
 ```
 
+**SSH host key verification (recommended):** by default, connections to nodes
+skip SSH host key verification and are vulnerable to MITM attacks. Set
+`ssh_options.known_hosts_file` to a `known_hosts` file (standard OpenSSH
+format, covering the infra/worker nodes) to enable verification:
+
+```hcl
+ssh_options = {
+  known_hosts_file = "/path/to/known_hosts"
+}
+```
+
 ### 2. Deploy
 
 ```bash

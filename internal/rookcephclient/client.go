@@ -8,17 +8,21 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+
+	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/edgeclient"
 )
 
 // Client manages SSH connections and Rook-Ceph operations on remote nodes
@@ -26,6 +30,8 @@ type Client struct {
 	SSHUser     string
 	SSHPassword string
 	SSHOptions  SSHOptions
+
+	knownHostsWarnOnce sync.Once
 }
 
 // SSHOptions holds SSH connection parameters
@@ -33,6 +39,7 @@ type SSHOptions struct {
 	ConnectTimeout      int
 	ServerAliveInterval int
 	ServerAliveCount    int
+	KnownHostsFile      string // path to known_hosts file for SSH host key verification; leave empty to disable verification
 }
 
 // RookCephConfig holds Rook-Ceph installation parameters
@@ -65,12 +72,22 @@ func NewClient(sshUser string, sshPassword string, opts SSHOptions) *Client {
 
 // sshDial establishes an SSH connection with keepalive support
 func (c *Client) sshDial(host string) (*ssh.Client, func(), error) {
+	hostKeyCallback, err := edgeclient.HostKeyCallback(c.SSHOptions.KnownHostsFile)
+	if err != nil {
+		return nil, nil, err
+	}
+	if c.SSHOptions.KnownHostsFile == "" {
+		c.knownHostsWarnOnce.Do(func() {
+			log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured)")
+		})
+	}
+
 	config := &ssh.ClientConfig{
 		User: c.SSHUser,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(c.SSHPassword),
 		},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         time.Duration(c.SSHOptions.ConnectTimeout) * time.Second,
 	}
 

@@ -9,14 +9,17 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.ibm.com/Activity-Insights/terraform-provider-guardium-data-protection/internal/k8sclient"
@@ -27,14 +30,16 @@ type Config struct {
 	// Central Manager
 	CMUrl      string
 	OAuthToken string
+	CMCertPath string
 
 	// Platform
 	Platform string // k3s, eks, openshift
 
 	// SSH configuration
-	SSHUser     string
-	SSHPassword string
-	SSHKeyPath  string
+	SSHUser        string
+	SSHPassword    string
+	SSHKeyPath     string
+	KnownHostsFile string // path to known_hosts file for SSH host key verification; leave empty to disable verification
 
 	// AWS EKS
 	AWSRegion           string
@@ -60,6 +65,47 @@ type Client struct {
 	Config    Config
 	k8sClient *k8sclient.Client
 	sshClient *SSHClient
+
+	knownHostsWarnOnce sync.Once
+	cmCertWarnOnce     sync.Once
+}
+
+// warnIfNoKnownHosts logs (once per Client) that SSH host key verification is
+// disabled when no known_hosts file is configured.
+func (c *Client) warnIfNoKnownHosts() {
+	if c.Config.KnownHostsFile == "" {
+		c.knownHostsWarnOnce.Do(func() {
+			log.Printf("[WARN] SSH host key verification is disabled (no known_hosts file configured)")
+		})
+	}
+}
+
+// cmTLSConfig builds the TLS config used to connect to the Central Manager.
+// If CMCertPath is set and points to a readable PEM certificate, it is
+// added to the trusted root pool and certificate verification is enabled.
+// Otherwise verification is skipped (with a one-time warning), matching the
+// insecure fallback behavior previously hardcoded here.
+func (c *Client) cmTLSConfig() (*tls.Config, error) {
+	if c.Config.CMCertPath == "" {
+		c.cmCertWarnOnce.Do(func() {
+			log.Printf("[WARN] TLS certificate verification is disabled for Central Manager connections (no cm_cert_path configured)")
+		})
+		return &tls.Config{InsecureSkipVerify: true}, nil
+	}
+
+	certPEM, err := os.ReadFile(c.Config.CMCertPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CM certificate at %q: %w", c.Config.CMCertPath, err)
+	}
+
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(certPEM) {
+		return nil, fmt.Errorf("failed to parse CM certificate at %q: no valid PEM certificate found", c.Config.CMCertPath)
+	}
+
+	return &tls.Config{
+		RootCAs: pool,
+	}, nil
 }
 
 // NewClient creates a new Client
@@ -70,7 +116,8 @@ func NewClient(cfg Config) *Client {
 
 	// Initialize SSH client if credentials provided
 	if cfg.SSHUser != "" && (cfg.SSHPassword != "" || cfg.SSHKeyPath != "") {
-		sshClient, err := NewSSHClient(cfg.SSHUser, cfg.SSHPassword, cfg.SSHKeyPath)
+		c.warnIfNoKnownHosts()
+		sshClient, err := NewSSHClient(cfg.SSHUser, cfg.SSHPassword, cfg.SSHKeyPath, cfg.KnownHostsFile)
 		if err == nil {
 			c.sshClient = sshClient
 		}
@@ -177,10 +224,16 @@ func (c *Client) DownloadBundle(edgeName, destDir string) error {
 	// URL matches: /restAPI/get_bundle?name={edgeName}
 	bundleURL := fmt.Sprintf("%s/restAPI/get_bundle?name=%s", strings.TrimSuffix(c.Config.CMUrl, "/"), edgeName)
 
-	// Create HTTP client with TLS skip verify (equivalent to curl -k)
+	// Use CM_CERT_PATH to verify the Central Manager's certificate when configured,
+	// otherwise fall back to skipping verification (equivalent to curl -k).
+	tlsConfig, err := c.cmTLSConfig()
+	if err != nil {
+		return fmt.Errorf("failed to build TLS config for Central Manager: %w", err)
+	}
+
 	httpClient := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: tlsConfig,
 		},
 		Timeout: 5 * time.Minute,
 	}
@@ -530,7 +583,8 @@ func (c *Client) InstallCertsEKS(ctx context.Context, workDir string, registryHo
 	}
 
 	// Create SSH client with EKS-specific credentials (passphrase passed as password)
-	eksSSH, err := NewSSHClient(c.Config.EKSSSHUser, c.Config.EKSSSHKeyPassphrase, c.Config.EKSSSHKeyPath)
+	c.warnIfNoKnownHosts()
+	eksSSH, err := NewSSHClient(c.Config.EKSSSHUser, c.Config.EKSSSHKeyPassphrase, c.Config.EKSSSHKeyPath, c.Config.KnownHostsFile)
 	if err != nil {
 		return fmt.Errorf("failed to create EKS SSH client: %w", err)
 	}

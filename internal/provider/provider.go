@@ -5,9 +5,14 @@ package provider
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -51,6 +56,7 @@ type guardiumDataProtectionModel struct {
 	K3sConnectTimeout      types.Int64  `tfsdk:"k3s_connect_timeout"`
 	K3sServerAliveInterval types.Int64  `tfsdk:"k3s_server_alive_interval"`
 	K3sServerAliveCount    types.Int64  `tfsdk:"k3s_server_alive_count"`
+	K3sSSHKnownHostsFile   types.String `tfsdk:"k3s_ssh_known_hosts_file"`
 
 	// Rook-Ceph config
 	RookCephSSHUser             types.String `tfsdk:"rook_ceph_ssh_user"`
@@ -58,14 +64,17 @@ type guardiumDataProtectionModel struct {
 	RookCephConnectTimeout      types.Int64  `tfsdk:"rook_ceph_connect_timeout"`
 	RookCephServerAliveInterval types.Int64  `tfsdk:"rook_ceph_server_alive_interval"`
 	RookCephServerAliveCount    types.Int64  `tfsdk:"rook_ceph_server_alive_count"`
+	RookCephSSHKnownHostsFile   types.String `tfsdk:"rook_ceph_ssh_known_hosts_file"`
 
 	// Edge config
 	CMUrl               types.String `tfsdk:"cm_url"`
 	OAuthToken          types.String `tfsdk:"oauth_token"`
+	CMCertPath          types.String `tfsdk:"cm_cert_path"`
 	Platform            types.String `tfsdk:"platform"`
 	SSHUser             types.String `tfsdk:"ssh_user"`
 	SSHPassword         types.String `tfsdk:"ssh_password"`
 	SSHKeyPath          types.String `tfsdk:"ssh_key_path"`
+	SSHKnownHostsFile   types.String `tfsdk:"ssh_known_hosts_file"`
 	AWSRegion           types.String `tfsdk:"aws_region"`
 	AWSProfile          types.String `tfsdk:"aws_profile"`
 	AWSAccessKey        types.String `tfsdk:"aws_access_key"`
@@ -123,6 +132,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				MarkdownDescription: "SSH keepalive count before disconnect for K3s operations. Defaults to 3.",
 				Optional:            true,
 			},
+			"k3s_ssh_known_hosts_file": schema.StringAttribute{
+				MarkdownDescription: "Path to a known_hosts file used to verify K3s node SSH host keys. Can also be set via K3S_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled.",
+				Optional:            true,
+			},
 
 			// Rook-Ceph attributes
 			"rook_ceph_ssh_user": schema.StringAttribute{
@@ -146,6 +159,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				MarkdownDescription: "SSH keepalive count before disconnect for Rook-Ceph operations. Defaults to 3.",
 				Optional:            true,
 			},
+			"rook_ceph_ssh_known_hosts_file": schema.StringAttribute{
+				MarkdownDescription: "Path to a known_hosts file used to verify Rook-Ceph node SSH host keys. Can also be set via ROOK_CEPH_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled",
+				Optional:            true,
+			},
 
 			// Edge schemas
 			"cm_url": schema.StringAttribute{
@@ -156,6 +173,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 				MarkdownDescription: "OAuth token for authenticating with Central Manager",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"cm_cert_path": schema.StringAttribute{
+				MarkdownDescription: "Path to a PEM-encoded certificate used to verify the Central Manager's TLS certificate. Can also be set via the GDP_CM_CERT_PATH environment variable. If unset, TLS certificate verification is disabled.",
+				Optional:            true,
 			},
 			"platform": schema.StringAttribute{
 				MarkdownDescription: "Target platform: k3s, eks, or openshift",
@@ -172,6 +193,10 @@ func (p *GuardiumDataProtectionProvider) Schema(ctx context.Context, req provide
 			},
 			"ssh_key_path": schema.StringAttribute{
 				MarkdownDescription: "Path to SSH private key file",
+				Optional:            true,
+			},
+			"ssh_known_hosts_file": schema.StringAttribute{
+				MarkdownDescription: "Path to a known_hosts file used to verify edge/EKS node SSH host keys. Can also be set via GDP_SSH_KNOWN_HOSTS_FILE environment variable. If unset, host key verification is disabled.",
 				Optional:            true,
 			},
 			"aws_region": schema.StringAttribute{
@@ -258,10 +283,12 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 	// ===== Edge Client Configuration =====
 	cmUrl := getStringValue(data.CMUrl, "GDP_CM_URL")
 	oauthToken := getStringValue(data.OAuthToken, "GDP_OAUTH_TOKEN")
+	cmCertPath := getStringValue(data.CMCertPath, "GDP_CM_CERT_PATH")
 	platform := getStringValue(data.Platform, "GDP_PLATFORM")
 	sshUser := getStringValue(data.SSHUser, "GDP_SSH_USER")
 	sshPassword := getStringValue(data.SSHPassword, "GDP_SSH_PASSWORD")
 	sshKeyPath := getStringValue(data.SSHKeyPath, "GDP_SSH_KEY_PATH")
+	sshKnownHostsFile := getStringValue(data.SSHKnownHostsFile, "GDP_SSH_KNOWN_HOSTS_FILE")
 	awsRegion := getStringValue(data.AWSRegion, "AWS_REGION")
 	awsProfile := getStringValue(data.AWSProfile, "AWS_PROFILE")
 	awsAccessKey := getStringValue(data.AWSAccessKey, "AWS_ACCESS_KEY_ID")
@@ -283,13 +310,50 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		sshUser = "root"
 	}
 
+	if sshUser != "" && (sshPassword != "" || sshKeyPath != "") && sshKnownHostsFile == "" {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("ssh_known_hosts_file"),
+			"SSH host key verification disabled",
+			"No known_hosts file is configured for edge/EKS node SSH connections, so host key verification is skipped and connections are vulnerable to MITM attacks. Set ssh_known_hosts_file (or the GDP_SSH_KNOWN_HOSTS_FILE environment variable) to a known_hosts file to enable verification.",
+		)
+	}
+
+	if cmUrl != "" && cmCertPath == "" {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("cm_cert_path"),
+			"Central Manager TLS certificate verification disabled",
+			"No certificate is configured for Central Manager connections, so TLS certificate verification is skipped and connections are vulnerable to MITM attacks. Set cm_cert_path (or the GDP_CM_CERT_PATH environment variable) to a PEM certificate to enable verification.",
+		)
+	}
+
+	if cmCertPath != "" {
+		certWarnings, err := validateCMCertificate(cmCertPath)
+		if err != nil {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("cm_cert_path"),
+				"Invalid Central Manager certificate",
+				fmt.Sprintf("cm_cert_path %q could not be used: %s", cmCertPath, err),
+			)
+			return
+		}
+		for _, w := range certWarnings {
+			resp.Diagnostics.AddAttributeWarning(
+				path.Root("cm_cert_path"),
+				"Central Manager certificate may not be trustworthy",
+				w,
+			)
+		}
+	}
+
 	edgeClient := edgeclient.NewClient(edgeclient.Config{
 		CMUrl:                 cmUrl,
 		OAuthToken:            oauthToken,
+		CMCertPath:            cmCertPath,
 		Platform:              platform,
 		SSHUser:               sshUser,
 		SSHPassword:           sshPassword,
 		SSHKeyPath:            sshKeyPath,
+		KnownHostsFile:        sshKnownHostsFile,
 		AWSRegion:             awsRegion,
 		AWSProfile:            awsProfile,
 		AWSAccessKey:          awsAccessKey,
@@ -311,6 +375,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		k3sSSHUser = "root"
 	}
 	k3sSSHPassword := getStringValue(data.K3sSSHPassword, "K3S_SSH_PASSWORD")
+	k3sSSHKnownHostsFile := getStringValue(data.K3sSSHKnownHostsFile, "K3S_SSH_KNOWN_HOSTS_FILE")
 
 	k3sConnectTimeout := int(data.K3sConnectTimeout.ValueInt64())
 	if k3sConnectTimeout == 0 {
@@ -331,7 +396,16 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 			ConnectTimeout:      k3sConnectTimeout,
 			ServerAliveInterval: k3sServerAliveInterval,
 			ServerAliveCount:    k3sServerAliveCount,
+			KnownHostsFile:      k3sSSHKnownHostsFile,
 		})
+
+		if k3sSSHKnownHostsFile == "" {
+			resp.Diagnostics.AddAttributeWarning(
+				path.Root("k3s_ssh_known_hosts_file"),
+				"SSH host key verification disabled",
+				"No known_hosts file is configured for K3s node SSH connections, so host key verification is skipped and connections are vulnerable to MITM attacks. Set k3s_ssh_known_hosts_file (or the K3S_SSH_KNOWN_HOSTS_FILE environment variable) to a known_hosts file to enable verification.",
+			)
+		}
 	}
 
 	// ===== Rook-Ceph Client Configuration =====
@@ -340,6 +414,7 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 		rookCephSSHUser = "root"
 	}
 	rookCephSSHPassword := getStringValue(data.RookCephSSHPassword, "ROOK_CEPH_SSH_PASSWORD")
+	rookCephSSHKnownHostsFile := getStringValue(data.RookCephSSHKnownHostsFile, "ROOK_CEPH_SSH_KNOWN_HOSTS_FILE")
 
 	rookCephConnectTimeout := int(data.RookCephConnectTimeout.ValueInt64())
 	if rookCephConnectTimeout == 0 {
@@ -360,7 +435,16 @@ func (p *GuardiumDataProtectionProvider) Configure(ctx context.Context, req prov
 			ConnectTimeout:      rookCephConnectTimeout,
 			ServerAliveInterval: rookCephServerAliveInterval,
 			ServerAliveCount:    rookCephServerAliveCount,
+			KnownHostsFile:      rookCephSSHKnownHostsFile,
 		})
+
+		if rookCephSSHKnownHostsFile == "" {
+			resp.Diagnostics.AddAttributeWarning(
+				path.Root("rook_ceph_ssh_known_hosts_file"),
+				"SSH host key verification disabled",
+				"No known_hosts file is configured for Rook-Ceph node SSH connections, so host key verification is skipped and connections are vulnerable to MITM attacks. Set rook_ceph_ssh_known_hosts_file (or the ROOK_CEPH_SSH_KNOWN_HOSTS_FILE environment variable) to a known_hosts file to enable verification.",
+			)
+		}
 	}
 
 	// ===== Create Unified Client =====
@@ -423,6 +507,61 @@ func getBoolValue(v types.Bool, envKey string) bool {
 	}
 	envVal := os.Getenv(envKey)
 	return envVal == "true" || envVal == "1" || envVal == "yes"
+}
+
+// validateCMCertificate reads and parses the PEM certificate(s) at certPath
+func validateCMCertificate(certPath string) ([]string, error) {
+	certPEM, err := os.ReadFile(certPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read certificate file: %w", err)
+	}
+
+	var certs []*x509.Certificate
+	rest := certPEM
+	for {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse certificate: %w", err)
+		}
+		certs = append(certs, cert)
+	}
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("no valid PEM certificate found")
+	}
+
+	var warnings []string
+	now := time.Now()
+	for _, cert := range certs {
+		if now.Before(cert.NotBefore) {
+			warnings = append(warnings, fmt.Sprintf("certificate %q is not valid until %s", cert.Subject, cert.NotBefore.Format(time.RFC3339)))
+		}
+		if now.After(cert.NotAfter) {
+			warnings = append(warnings, fmt.Sprintf("certificate %q expired on %s", cert.Subject, cert.NotAfter.Format(time.RFC3339)))
+		}
+
+		if len(cert.ExtKeyUsage) > 0 {
+			validForServerAuth := false
+			for _, eku := range cert.ExtKeyUsage {
+				if eku == x509.ExtKeyUsageServerAuth || eku == x509.ExtKeyUsageAny {
+					validForServerAuth = true
+					break
+				}
+			}
+			if !validForServerAuth {
+				warnings = append(warnings, fmt.Sprintf("certificate %q does not declare Server Authentication as an extended key usage", cert.Subject))
+			}
+		}
+	}
+
+	return warnings, nil
 }
 
 // Made with Bob
