@@ -34,13 +34,16 @@ provider "guardium-data-protection" {
   rook_ceph_connect_timeout       = var.ssh_options.connect_timeout
   rook_ceph_server_alive_interval = var.ssh_options.server_alive_interval
   rook_ceph_server_alive_count    = var.ssh_options.server_alive_count
+  rook_ceph_ssh_known_hosts_file  = var.ssh_options.known_hosts_file
 
   # Edge deployment configuration
-  cm_url       = var.edge_cm_url
-  oauth_token  = var.edge_oauth_token
-  platform     = "openshift"
-  ssh_user     = var.ocp_ssh_user
-  ssh_password = var.ocp_ssh_password
+  cm_url               = var.edge_cm_url
+  oauth_token          = var.edge_oauth_token
+  cm_cert_path         = var.edge_cm_cert_path
+  platform             = "openshift"
+  ssh_user             = var.ocp_ssh_user
+  ssh_password         = var.ocp_ssh_password
+  ssh_known_hosts_file = var.ssh_options.known_hosts_file
 
   # OpenShift native OAuth
   ocp_server               = local.ocp_api_server

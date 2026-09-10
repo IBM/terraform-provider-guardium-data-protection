@@ -14,6 +14,7 @@ import (
 	"log"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 // SSHClient wraps an SSH connection
@@ -22,10 +23,27 @@ type SSHClient struct {
 	user   string
 }
 
+// HostKeyCallback builds an ssh.HostKeyCallback that verifies server host
+// keys against knownHostsFile (standard OpenSSH known_hosts format). If
+// knownHostsFile is empty, it falls back to accepting any host key —
+// callers should warn when doing so, since this permits MITM attacks.
+func HostKeyCallback(knownHostsFile string) (ssh.HostKeyCallback, error) {
+	if knownHostsFile == "" {
+		return ssh.InsecureIgnoreHostKey(), nil //nolint:gosec // explicit opt-out, see doc comment above
+	}
+
+	cb, err := knownhosts.New(knownHostsFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load known_hosts file %q: %w", knownHostsFile, err)
+	}
+	return cb, nil
+}
+
 // NewSSHClient creates a new SSH client with password or key authentication.
 // For passphrase-protected keys, pass the passphrase as the password parameter
-// when keyPath is also set.
-func NewSSHClient(user, password, keyPath string) (*SSHClient, error) {
+// when keyPath is also set. If knownHostsFile is empty, host key verification
+// is skipped (StrictHostKeyChecking=no); callers should warn about this.
+func NewSSHClient(user, password, keyPath, knownHostsFile string) (*SSHClient, error) {
 	var authMethods []ssh.AuthMethod
 
 	if keyPath != "" {
@@ -60,10 +78,15 @@ func NewSSHClient(user, password, keyPath string) (*SSHClient, error) {
 		return nil, fmt.Errorf("no SSH authentication method provided")
 	}
 
+	hostKeyCallback, err := HostKeyCallback(knownHostsFile)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &ssh.ClientConfig{
 		User:            user,
 		Auth:            authMethods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Equivalent to StrictHostKeyChecking=no
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         30 * time.Second,
 	}
 

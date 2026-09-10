@@ -111,6 +111,7 @@ variable "ssh_options" {
     connect_timeout       = optional(number, 30)
     server_alive_interval = optional(number, 10)
     server_alive_count    = optional(number, 3)
+    known_hosts_file      = optional(string, "")
   })
   default = {}
 }
@@ -168,6 +169,12 @@ variable "edge_oauth_token" {
   type        = string
   default     = ""
   sensitive   = true
+}
+
+variable "edge_cm_cert_path" {
+  description = "Path to a PEM-encoded certificate used to verify the Central Manager's TLS certificate. If unset, TLS certificate verification is disabled."
+  type        = string
+  default     = ""
 }
 
 variable "edge_bundle_directory" {

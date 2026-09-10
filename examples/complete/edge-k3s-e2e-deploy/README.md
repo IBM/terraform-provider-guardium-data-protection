@@ -77,6 +77,17 @@ k3s_version  = "v1.32.3"
 k3s_airgap_install = true
 ```
 
+**SSH host key verification (recommended):** by default, connections to nodes
+skip SSH host key verification and are vulnerable to MITM attacks. Set
+`ssh_options.known_hosts_file` to a `known_hosts` file (standard OpenSSH
+format, covering all master/worker nodes) to enable verification:
+
+```hcl
+ssh_options = {
+  known_hosts_file = "/path/to/known_hosts"
+}
+```
+
 ### 2. Deploy
 
 ```bash

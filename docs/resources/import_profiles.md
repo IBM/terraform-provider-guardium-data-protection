@@ -24,6 +24,7 @@ Import profiles from a file
 ### Optional
 
 - `ca_path` (String) Path to the file to import
+- `test_connections` (Boolean) Test connections for imported profiles that support it (e.g., Kafka-based UCs)
 
 ### Read-Only
 
