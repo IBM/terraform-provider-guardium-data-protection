@@ -145,22 +145,44 @@ func TestGenerateAccessToken(t *testing.T) {
 					t.Errorf("Expected /oauth/token path, got %s", r.URL.Path)
 				}
 
-				// Check query parameters
+				// Content-Type must be form-encoded (all credentials are in the body, not the URL)
+				if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+					t.Errorf("Expected Content-Type application/x-www-form-urlencoded, got %s", r.Header.Get("Content-Type"))
+				}
+
+				// No credentials must appear in the URL query string
 				query := r.URL.Query()
-				if query.Get("client_id") != tc.clientId {
-					t.Errorf("Expected client_id=%s, got %s", tc.clientId, query.Get("client_id"))
+				if query.Get("client_id") != "" {
+					t.Errorf("client_id must not appear in URL query string")
 				}
-				if query.Get("client_secret") != tc.clientSecret {
-					t.Errorf("Expected client_secret=%s, got %s", tc.clientSecret, query.Get("client_secret"))
+				if query.Get("client_secret") != "" {
+					t.Errorf("client_secret must not appear in URL query string")
 				}
-				if query.Get("username") != tc.username {
-					t.Errorf("Expected username=%s, got %s", tc.username, query.Get("username"))
+				if query.Get("username") != "" {
+					t.Errorf("username must not appear in URL query string")
 				}
-				if query.Get("password") != tc.password {
-					t.Errorf("Expected password=%s, got %s", tc.password, query.Get("password"))
+				if query.Get("password") != "" {
+					t.Errorf("password must not appear in URL query string")
 				}
-				if query.Get("grant_type") != "password" {
-					t.Errorf("Expected grant_type=password, got %s", query.Get("grant_type"))
+
+				// All credentials must be in the POST body
+				if err := r.ParseForm(); err != nil {
+					t.Fatalf("Failed to parse form body: %v", err)
+				}
+				if r.FormValue("client_id") != tc.clientId {
+					t.Errorf("Expected client_id=%s in body, got %s", tc.clientId, r.FormValue("client_id"))
+				}
+				if r.FormValue("client_secret") != tc.clientSecret {
+					t.Errorf("Expected client_secret=%s in body, got %s", tc.clientSecret, r.FormValue("client_secret"))
+				}
+				if r.FormValue("username") != tc.username {
+					t.Errorf("Expected username=%s in body, got %s", tc.username, r.FormValue("username"))
+				}
+				if r.FormValue("password") != tc.password {
+					t.Errorf("Expected password=%s in body, got %s", tc.password, r.FormValue("password"))
+				}
+				if r.FormValue("grant_type") != "password" {
+					t.Errorf("Expected grant_type=password in body, got %s", r.FormValue("grant_type"))
 				}
 
 				// Set response status and body
@@ -244,25 +266,46 @@ func TestGenerateAccessTokenWithGDPURLAndPort(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create a test server that validates the URL construction
+			// Create a test server that validates the URL construction and credential placement
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Validate that the request contains all OIDC parameters
-				query := r.URL.Query()
+				// Content-Type must be form-encoded
+				if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+					t.Errorf("Content-Type mismatch: expected application/x-www-form-urlencoded, got %s", r.Header.Get("Content-Type"))
+				}
 
-				if query.Get("client_id") != tc.clientId {
-					t.Errorf("client_id mismatch: expected %s, got %s", tc.clientId, query.Get("client_id"))
+				// No credentials must appear in the URL query string
+				query := r.URL.Query()
+				if query.Get("client_id") != "" {
+					t.Errorf("client_id must not appear in URL query string")
 				}
-				if query.Get("client_secret") != tc.clientSecret {
-					t.Errorf("client_secret mismatch: expected %s, got %s", tc.clientSecret, query.Get("client_secret"))
+				if query.Get("client_secret") != "" {
+					t.Errorf("client_secret must not appear in URL query string")
 				}
-				if query.Get("username") != tc.username {
-					t.Errorf("username mismatch: expected %s, got %s", tc.username, query.Get("username"))
+				if query.Get("username") != "" {
+					t.Errorf("username must not appear in URL query string")
 				}
-				if query.Get("password") != tc.password {
-					t.Errorf("password mismatch: expected %s, got %s", tc.password, query.Get("password"))
+				if query.Get("password") != "" {
+					t.Errorf("password must not appear in URL query string")
 				}
-				if query.Get("grant_type") != "password" {
-					t.Errorf("grant_type mismatch: expected password, got %s", query.Get("grant_type"))
+
+				// All credentials must be in the POST body
+				if err := r.ParseForm(); err != nil {
+					t.Fatalf("Failed to parse form body: %v", err)
+				}
+				if r.FormValue("client_id") != tc.clientId {
+					t.Errorf("client_id mismatch: expected %s in body, got %s", tc.clientId, r.FormValue("client_id"))
+				}
+				if r.FormValue("client_secret") != tc.clientSecret {
+					t.Errorf("client_secret mismatch: expected %s in body, got %s", tc.clientSecret, r.FormValue("client_secret"))
+				}
+				if r.FormValue("username") != tc.username {
+					t.Errorf("username mismatch: expected %s in body, got %s", tc.username, r.FormValue("username"))
+				}
+				if r.FormValue("password") != tc.password {
+					t.Errorf("password mismatch: expected %s in body, got %s", tc.password, r.FormValue("password"))
+				}
+				if r.FormValue("grant_type") != "password" {
+					t.Errorf("grant_type mismatch: expected password in body, got %s", r.FormValue("grant_type"))
 				}
 
 				w.WriteHeader(http.StatusOK)

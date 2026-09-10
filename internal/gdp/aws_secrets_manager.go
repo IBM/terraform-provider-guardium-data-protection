@@ -48,7 +48,6 @@ func (c *Client) CreateAWSSecretsManager(ctx context.Context, httpClient *http.C
 	}
 
 	tflog.Debug(ctx, "AWS Secrets Manager create request URL: "+url)
-	tflog.Debug(ctx, "AWS Secrets Manager create request body: "+string(jsonBody))
 
 	// Create the request - use POST for creating new configurations
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBody))
@@ -73,7 +72,7 @@ func (c *Client) CreateAWSSecretsManager(ctx context.Context, httpClient *http.C
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager create response: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager create response received", map[string]any{"statusCode": resp.StatusCode})
 	return nil
 }
 
@@ -89,7 +88,6 @@ func (c *Client) UpdateAWSSecretsManager(ctx context.Context, httpClient *http.C
 	}
 
 	tflog.Debug(ctx, "AWS Secrets Manager update request URL: "+url)
-	tflog.Debug(ctx, "AWS Secrets Manager update request body: "+string(jsonBody))
 
 	// Create the request - use PUT for updating existing configurations
 	req, err := http.NewRequestWithContext(ctx, "PUT", url, bytes.NewBuffer(jsonBody))
@@ -114,7 +112,7 @@ func (c *Client) UpdateAWSSecretsManager(ctx context.Context, httpClient *http.C
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager update response: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager update response received", map[string]any{"statusCode": resp.StatusCode})
 	return nil
 }
 
@@ -168,7 +166,7 @@ func (c *Client) GetAllAWSSecretsManagerConfigs(ctx context.Context, httpClient 
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager response body: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager response body received", map[string]any{"length": len(body)})
 
 	// Try to unmarshal as an array
 	var configs []struct {
@@ -243,7 +241,6 @@ func (c *Client) DeleteAWSSecretsManager(ctx context.Context, httpClient *http.C
 	}
 
 	tflog.Debug(ctx, "AWS Secrets Manager delete request URL: "+url)
-	tflog.Debug(ctx, "AWS Secrets Manager delete request body: "+string(jsonBody))
 
 	// Create the request
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, bytes.NewBuffer(jsonBody))
@@ -268,6 +265,6 @@ func (c *Client) DeleteAWSSecretsManager(ctx context.Context, httpClient *http.C
 		return fmt.Errorf("error response from server: %s, status code: %d", string(body), resp.StatusCode)
 	}
 
-	tflog.Debug(ctx, "AWS Secrets Manager delete response: "+string(body))
+	tflog.Debug(ctx, "AWS Secrets Manager delete response received", map[string]any{"statusCode": resp.StatusCode})
 	return nil
 }

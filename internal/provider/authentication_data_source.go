@@ -106,6 +106,15 @@ type AuthenticationResponse struct {
 }
 
 func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	if d.client == nil {
+		resp.Diagnostics.AddError(
+			"Provider not configured",
+			"The guardium_data_protection_authentication data source requires the provider to be configured with host and port. "+
+				"Set the host and port attributes in the provider block or via the GDP_HOST and GDP_PORT environment variables.",
+		)
+		return
+	}
+
 	var data = new(AuthenticationDataSourceModel)
 	diags := req.Config.Get(ctx, data)
 	resp.Diagnostics.Append(diags...)
@@ -114,22 +123,23 @@ func (d *AuthenticationDataSource) Read(ctx context.Context, req datasource.Read
 		return
 	}
 
-	var (
-		accessToken string
-		err         error
-	)
-
-	if data.CAPath.IsNull() {
-		accessToken, err = d.client.NewInsecureClient().GenerateAccessToken(ctx, data.ClientSecret.ValueString(), data.Username.ValueString(), data.Password.ValueString(), data.ClientID.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Failed to retrieve access token",
-				fmt.Sprintf("Failed to retrieve access token: %s.", err.Error()),
-			)
-			return
-		}
+	secureClient, err := d.client.NewSecureClient(ctx, data.CAPath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to initialise secure TLS client",
+			fmt.Sprintf("Failed to initialise secure TLS client: %s.", err.Error()),
+		)
+		return
 	}
-	tflog.Info(ctx, accessToken)
+
+	accessToken, err := secureClient.GenerateAccessToken(ctx, data.ClientSecret.ValueString(), data.Username.ValueString(), data.Password.ValueString(), data.ClientID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to retrieve access token",
+			fmt.Sprintf("Failed to retrieve access token: %s.", err.Error()),
+		)
+		return
+	}
 	data.AccessToken = types.StringValue(accessToken)
 	resp.State.Set(ctx, data)
 }
