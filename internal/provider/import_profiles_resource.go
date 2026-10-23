@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -22,12 +23,13 @@ type ImportProfilesResource struct {
 
 // ImportProfilesResourceModel describes the resource data model
 type ImportProfilesResourceModel struct {
-	AccessToken     types.String `tfsdk:"access_token"`
-	PathToFile      types.String `tfsdk:"path_to_file"`
-	UpdateMode      types.Bool   `tfsdk:"update_mode"`
-	TestConnections types.Bool   `tfsdk:"test_connections"`
-	ID              types.String `tfsdk:"id"`
-	CaPath          types.String `tfsdk:"ca_path"`
+	AccessToken                 types.String `tfsdk:"access_token"`
+	PathToFile                  types.String `tfsdk:"path_to_file"`
+	UpdateMode                  types.Bool   `tfsdk:"update_mode"`
+	TestConnections             types.Bool   `tfsdk:"test_connections"`
+	ID                          types.String `tfsdk:"id"`
+	CaPath                      types.String `tfsdk:"ca_path"`
+	FailedConnectionTestProfile types.List   `tfsdk:"failed_connection_test_profiles"`
 }
 
 func NewImportProfilesResource() resource.Resource {
@@ -62,8 +64,13 @@ func (r *ImportProfilesResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Required:            true,
 			},
 			"test_connections": schema.BoolAttribute{
-				MarkdownDescription: "Test connections for imported profiles that support it (e.g., Kafka-based UCs)",
+				MarkdownDescription: "Test connections for imported profiles that support it (e.g., Kafka-based UCs). Failed connection tests do not fail the import; they are reported as a warning and listed in `failed_connection_test_profiles`.",
 				Optional:            true,
+			},
+			"failed_connection_test_profiles": schema.ListAttribute{
+				MarkdownDescription: "Names of the imported profiles whose connection test failed. Empty when `test_connections` is not enabled or every test succeeded.",
+				Computed:            true,
+				ElementType:         types.StringType,
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -109,10 +116,15 @@ func (r *ImportProfilesResource) Create(ctx context.Context, req resource.Create
 	if !data.TestConnections.IsNull() {
 		testConnections = data.TestConnections.ValueBool()
 	}
-	if err := secureClient.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections); err != nil {
+	testWarning, failedProfiles, err := secureClient.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections)
+	if err != nil {
 		resp.Diagnostics.AddError("Error importing profiles", fmt.Sprintf("Could not import profiles: %s", err))
 		return
 	}
+	if testWarning != "" {
+		resp.Diagnostics.AddWarning("Some profile connection tests failed", testWarning)
+	}
+	data.FailedConnectionTestProfile = failedProfilesList(failedProfiles)
 
 	// Set a unique ID for the resource
 	data.ID = types.StringValue(fmt.Sprintf("%s-%s", r.client.Host, data.PathToFile.ValueString()))
@@ -155,13 +167,18 @@ func (r *ImportProfilesResource) Update(ctx context.Context, req resource.Update
 	if !data.TestConnections.IsNull() {
 		testConnections2 = data.TestConnections.ValueBool()
 	}
-	if err := secureClient2.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections2); err != nil {
+	testWarning, failedProfiles, err := secureClient2.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections2)
+	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing profiles",
 			fmt.Sprintf("Could not import profiles: %s", err),
 		)
 		return
 	}
+	if testWarning != "" {
+		resp.Diagnostics.AddWarning("Some profile connection tests failed", testWarning)
+	}
+	data.FailedConnectionTestProfile = failedProfilesList(failedProfiles)
 
 	// Set state
 	diags = resp.State.Set(ctx, &data)
@@ -171,4 +188,14 @@ func (r *ImportProfilesResource) Update(ctx context.Context, req resource.Update
 // Delete deletes the resource and removes the Terraform state
 func (r *ImportProfilesResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// This is a no-op as there's nothing to delete
+}
+
+// failedProfilesList converts profile names to a Terraform list. It is never null, so that
+// configurations can safely use it in expressions such as setsubtract().
+func failedProfilesList(names []string) types.List {
+	elems := make([]attr.Value, 0, len(names))
+	for _, n := range names {
+		elems = append(elems, types.StringValue(n))
+	}
+	return types.ListValueMust(types.StringType, elems)
 }

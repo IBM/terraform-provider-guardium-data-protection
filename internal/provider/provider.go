@@ -469,6 +469,7 @@ func (p *GuardiumDataProtectionProvider) Resources(ctx context.Context) []func()
 		NewConfigureVADatasourceResource,
 		NewConfigureVANotificationsResource,
 		NewAWSSecretsManagerResource,
+		NewUCCredentialResource,
 		// Edge resources
 		NewEdgeDeploymentResource,
 		NewK3SClusterResource,

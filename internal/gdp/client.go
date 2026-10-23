@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -102,9 +103,17 @@ type ImportProfilesFromFileResponse struct {
 	ErrorMessage string `json:"ErrorMessage"`
 }
 
-// ImportProfilesFromFile imports profiles from a local file using multipart/form-data upload
-// Requires GDP 12.2.1 or higher
-func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Client, accessToken, pathToFile string, updateMode, testConnections bool) error {
+// testConnectionMarker precedes the per-profile connection test results that Guardium
+// appends to the import response message when TestConnections is true.
+const testConnectionMarker = "Profiles that support Test Connection:"
+
+// ImportProfilesFromFile imports profiles from a local file using multipart/form-data upload.
+// Requires GDP 12.2.1 or higher.
+//
+// The returned warning is non-empty, and failedProfiles lists the affected profile names, when
+// the import succeeded but one or more connection tests failed. Connection test failures never
+// cause an error, so that the caller can continue to deploy the profiles that did succeed.
+func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Client, accessToken, pathToFile string, updateMode, testConnections bool) (string, []string, error) {
 	// Prepare the request URL
 	importProfilesFromFileUrl := fmt.Sprintf("%s://%s:%s/restAPI/importProfilesFromFile", c.protocol, c.Host, c.port)
 
@@ -112,7 +121,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	_, err := os.Stat(pathToFile)
 	if err != nil {
 		tflog.Error(ctx, "File not found", map[string]any{"pathToFile": pathToFile, "error": err.Error()})
-		return fmt.Errorf("file not found %s: %w (Note: SFTP upload is no longer supported, file must exist locally)", pathToFile, err)
+		return "", nil, fmt.Errorf("file not found %s: %w (Note: SFTP upload is no longer supported, file must exist locally)", pathToFile, err)
 	}
 
 	tflog.Info(ctx, "Uploading profile file via multipart upload", map[string]any{"pathToFile": pathToFile})
@@ -120,7 +129,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	file, err := os.Open(pathToFile)
 	if err != nil {
 		tflog.Error(ctx, "Error opening local file", map[string]any{"pathToFile": pathToFile, "error": err.Error()})
-		return fmt.Errorf("error opening file %s: %w", pathToFile, err)
+		return "", nil, fmt.Errorf("error opening file %s: %w", pathToFile, err)
 	}
 	defer file.Close()
 
@@ -131,12 +140,12 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	// Add the file to the multipart form
 	part, err := writer.CreateFormFile("path", filepath.Base(pathToFile))
 	if err != nil {
-		return fmt.Errorf("error creating form file: %w", err)
+		return "", nil, fmt.Errorf("error creating form file: %w", err)
 	}
 
 	_, err = io.Copy(part, file)
 	if err != nil {
-		return fmt.Errorf("error copying file content: %w", err)
+		return "", nil, fmt.Errorf("error copying file content: %w", err)
 	}
 
 	// Add updateMode parameter
@@ -146,7 +155,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 	err = writer.WriteField("updateMode", updateModeStr)
 	if err != nil {
-		return fmt.Errorf("error writing updateMode field: %w", err)
+		return "", nil, fmt.Errorf("error writing updateMode field: %w", err)
 	}
 
 	// Add TestConnections parameter
@@ -156,18 +165,18 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	}
 	err = writer.WriteField("TestConnections", testConnectionsStr)
 	if err != nil {
-		return fmt.Errorf("error writing TestConnections field: %w", err)
+		return "", nil, fmt.Errorf("error writing TestConnections field: %w", err)
 	}
 
 	err = writer.Close()
 	if err != nil {
-		return fmt.Errorf("error closing multipart writer: %w", err)
+		return "", nil, fmt.Errorf("error closing multipart writer: %w", err)
 	}
 
 	// Create the request
 	req, err := http.NewRequestWithContext(ctx, "POST", importProfilesFromFileUrl, body)
 	if err != nil {
-		return fmt.Errorf("error creating request: %w", err)
+		return "", nil, fmt.Errorf("error creating request: %w", err)
 	}
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
@@ -181,13 +190,13 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	// Send the request
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("error sending request: %w", err)
+		return "", nil, fmt.Errorf("error sending request: %w", err)
 	}
 
 	defer resp.Body.Close()
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error reading response body: %w", err)
+		return "", nil, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	tflog.Info(ctx, "Received response", map[string]any{
@@ -196,27 +205,61 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 
 	// Check the response status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error response from server: %s, status code: %d", string(responseBody), resp.StatusCode)
+		return "", nil, fmt.Errorf("error response from server: %s, status code: %d", string(responseBody), resp.StatusCode)
 	}
 
 	// Parse the response body to check for errors
 	var apiResponse ImportProfilesFromFileResponse
 	if err := json.Unmarshal(responseBody, &apiResponse); err != nil {
 		tflog.Warn(ctx, "failed to parse import profiles response, continuing anyway: "+err.Error())
-		return nil
+		return "", nil, nil
 	}
 
 	// Check for ErrorCode and ErrorMessage fields (API returns HTTP 200 even for errors)
 	if apiResponse.ErrorCode != "" && apiResponse.ErrorCode != "0" {
-		return fmt.Errorf("import profiles failed with error code %s: %s", apiResponse.ErrorCode, apiResponse.ErrorMessage)
+		return "", nil, fmt.Errorf("import profiles failed with error code %s: %s", apiResponse.ErrorCode, apiResponse.ErrorMessage)
 	}
 
-	// Check if the Message field contains an error
-	if apiResponse.Message != "" && containsErrorKeywords(apiResponse.Message) {
-		return fmt.Errorf("import profiles failed: %s", apiResponse.Message)
+	// Only the import part of the message is checked for error keywords. The connection
+	// test results are reported separately as a warning, because failed tests for some
+	// profiles must not block the deployment of the others.
+	importMessage, testResults := splitConnectionTestResults(apiResponse.Message)
+	if importMessage != "" && containsErrorKeywords(importMessage) {
+		return "", nil, fmt.Errorf("import profiles failed: %s", apiResponse.Message)
 	}
 
-	return nil
+	if failed := failedConnectionTestProfiles(testResults); len(failed) > 0 {
+		return testResults, failed, nil
+	}
+
+	return "", nil, nil
+}
+
+// splitConnectionTestResults splits an import response message into the import part and the
+// connection test part (everything from testConnectionMarker onwards, marker included).
+func splitConnectionTestResults(message string) (importMessage, testResults string) {
+	idx := strings.Index(message, testConnectionMarker)
+	if idx < 0 {
+		return message, ""
+	}
+	return message[:idx], message[idx:]
+}
+
+// connectionTestResultRe matches one profile entry of the connection test results, e.g.
+// "Profile 'name' (ID 12): Connection successful." or "Profile 'name' (ID 12):   - query: ...".
+// The second group is only set when the connection test succeeded.
+var connectionTestResultRe = regexp.MustCompile(`Profile '([^']+)' \(ID \d+\):\s*(Connection successful)?`)
+
+// failedConnectionTestProfiles returns the names of the profiles in the connection test
+// results that were not reported as "Connection successful".
+func failedConnectionTestProfiles(testResults string) []string {
+	var failed []string
+	for _, m := range connectionTestResultRe.FindAllStringSubmatch(testResults, -1) {
+		if m[2] == "" {
+			failed = append(failed, m[1])
+		}
+	}
+	return failed
 }
 
 // containsErrorKeywords checks if a message contains error-indicating keywords

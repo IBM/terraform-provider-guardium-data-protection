@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -481,7 +482,33 @@ func TestImportProfilesFromFile(t *testing.T) {
 		serverStatus   int
 		serverResponse string
 		expectError    bool
+		expectFailed   []string
 	}{
+		{
+			name:           "All connection tests succeed",
+			accessToken:    "test-token",
+			updateMode:     true,
+			serverStatus:   http.StatusOK,
+			serverResponse: `{"ID":"0","Message":"Profiles imported successfully. Profiles that support Test Connection: Profile 'p1' (ID 1): Connection successful. Profile 'p2' (ID 2): Connection successful."}`,
+			expectError:    false,
+		},
+		{
+			name:           "Some connection tests fail",
+			accessToken:    "test-token",
+			updateMode:     true,
+			serverStatus:   http.StatusOK,
+			serverResponse: `{"ID":"0","Message":"Profiles imported successfully. Profiles that support Test Connection: Profile 'oracle-profile1' (ID 150): Connection successful. Profile 'oracle-profile2' (ID 151):   - query:   - Couldn't execute validation query: java.sql.SQLException: ORA-01017: invalid username/password; logon denied https://docs.oracle.com/error-help/db/ora-01017/ Profile 'oracle-profile3' (ID 152):   - query:   - Couldn't execute validation query: java.sql.SQLException: ORA-01017: invalid username/password; logon denied  https://docs.oracle.com/error-help/db/ora-01017/ Profile 'oracle-profile4' (ID 153): Connection successful."}`,
+			expectError:    false,
+			expectFailed:   []string{"oracle-profile2", "oracle-profile3"},
+		},
+		{
+			name:           "Import itself fails",
+			accessToken:    "test-token",
+			updateMode:     true,
+			serverStatus:   http.StatusOK,
+			serverResponse: `{"ID":"0","Message":"Invalid profile definition in row 2"}`,
+			expectError:    true,
+		},
 		{
 			name:           "Successful import",
 			accessToken:    "test-token",
@@ -560,7 +587,7 @@ func TestImportProfilesFromFile(t *testing.T) {
 
 			// Call the function
 			ctx := context.Background()
-			err = client.ImportProfilesFromFile(ctx, server.Client(), tc.accessToken, tmpFile.Name(), tc.updateMode, false)
+			warning, failed, err := client.ImportProfilesFromFile(ctx, server.Client(), tc.accessToken, tmpFile.Name(), tc.updateMode, true)
 
 			// Check error
 			if tc.expectError && err == nil {
@@ -568,6 +595,12 @@ func TestImportProfilesFromFile(t *testing.T) {
 			}
 			if !tc.expectError && err != nil {
 				t.Errorf("Expected no error but got: %v", err)
+			}
+			if !reflect.DeepEqual(tc.expectFailed, failed) {
+				t.Errorf("Expected failed profiles %v, got %v", tc.expectFailed, failed)
+			}
+			if (len(tc.expectFailed) > 0) != (warning != "") {
+				t.Errorf("Expected warning=%v, got warning %q", len(tc.expectFailed) > 0, warning)
 			}
 		})
 	}
