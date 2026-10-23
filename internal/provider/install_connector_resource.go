@@ -20,11 +20,29 @@ type InstallConnectorResource struct {
 
 // InstallConnectorResourceModel describes the resource data model
 type InstallConnectorResourceModel struct {
-	AccessToken types.String `tfsdk:"access_token"`
-	CAPath      types.String `tfsdk:"ca_path"`
-	UdcName     types.String `tfsdk:"udc_name"`
-	GdpMuHost   types.String `tfsdk:"gdp_mu_host"`
-	ID          types.String `tfsdk:"id"`
+	AccessToken  types.String `tfsdk:"access_token"`
+	CAPath       types.String `tfsdk:"ca_path"`
+	UdcName      types.String `tfsdk:"udc_name"`
+	GdpMuHost    types.String `tfsdk:"gdp_mu_host"`
+	SkipProfiles types.List   `tfsdk:"skip_profiles"`
+	ID           types.String `tfsdk:"id"`
+}
+
+// shouldSkip reports whether the profile being installed is listed in skip_profiles.
+func (m InstallConnectorResourceModel) shouldSkip(ctx context.Context) (bool, error) {
+	if m.SkipProfiles.IsNull() || m.SkipProfiles.IsUnknown() {
+		return false, nil
+	}
+	var skip []string
+	if diags := m.SkipProfiles.ElementsAs(ctx, &skip, false); diags.HasError() {
+		return false, fmt.Errorf("could not read skip_profiles: %s", diags)
+	}
+	for _, name := range skip {
+		if name == m.UdcName.ValueString() {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func NewInstallConnectorResource() resource.Resource {
@@ -57,6 +75,11 @@ func (r *InstallConnectorResource) Schema(_ context.Context, _ resource.SchemaRe
 			"gdp_mu_host": schema.StringAttribute{
 				MarkdownDescription: "GDP MU host",
 				Required:            true,
+			},
+			"skip_profiles": schema.ListAttribute{
+				MarkdownDescription: "Profile names that must not be installed. When `udc_name` is in this list the install is skipped with a warning instead of failing, e.g. pass `failed_connection_test_profiles` from `guardium-data-protection_import_profiles` to deploy only the profiles whose connection test succeeded.",
+				Optional:            true,
+				ElementType:         types.StringType,
 			},
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -92,18 +115,36 @@ func (r *InstallConnectorResource) Create(ctx context.Context, req resource.Crea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	skip, err := data.shouldSkip(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid skip_profiles", err.Error())
+		return
+	}
+	if skip {
+		resp.Diagnostics.AddWarning(fmt.Sprintf("Connector install skipped for %q", data.UdcName.ValueString()), fmt.Sprintf("Profile %q was not installed because it is listed in skip_profiles (its connection test failed).", data.UdcName.ValueString()))
+		data.ID = types.StringValue(fmt.Sprintf("%s-%s-%s", r.client.Host, data.UdcName.ValueString(), data.GdpMuHost.ValueString()))
+		diags = resp.State.Set(ctx, &data)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
-	if data.CAPath.IsNull() {
-
-		// Make the API call to install connector
-		err := r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error installing connector",
-				fmt.Sprintf("Could not install connector: %s", err),
-			)
+	var installErr error
+	if data.CAPath.IsNull() || data.CAPath.ValueString() == "" {
+		installErr = r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
+	} else {
+		secureClient, secErr := r.client.NewSecureClient(data.CAPath.ValueString())
+		if secErr != nil {
+			resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", secErr))
 			return
 		}
+		installErr = secureClient.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
+	}
+	if installErr != nil {
+		resp.Diagnostics.AddError(
+			"Error installing connector",
+			fmt.Sprintf("Could not install connector: %s", installErr),
+		)
+		return
 	}
 
 	// Set a unique ID for the resource
@@ -138,13 +179,32 @@ func (r *InstallConnectorResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	if data.CAPath.IsNull() {
-		// Make the API call to install connector
-		err := r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
-		if err != nil {
-			resp.Diagnostics.AddError("Error installing connector", fmt.Sprintf("Could not install connector: %s", err))
+	skip, err := data.shouldSkip(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid skip_profiles", err.Error())
+		return
+	}
+	if skip {
+		resp.Diagnostics.AddWarning(fmt.Sprintf("Connector install skipped for %q", data.UdcName.ValueString()), fmt.Sprintf("Profile %q was not installed because it is listed in skip_profiles (its connection test failed).", data.UdcName.ValueString()))
+		diags = resp.State.Set(ctx, &data)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	var installErr error
+	if data.CAPath.IsNull() || data.CAPath.ValueString() == "" {
+		installErr = r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
+	} else {
+		secureClient, secErr := r.client.NewSecureClient(data.CAPath.ValueString())
+		if secErr != nil {
+			resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", secErr))
 			return
 		}
+		installErr = secureClient.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
+	}
+	if installErr != nil {
+		resp.Diagnostics.AddError("Error installing connector", fmt.Sprintf("Could not install connector: %s", installErr))
+		return
 	}
 
 	// Set state
