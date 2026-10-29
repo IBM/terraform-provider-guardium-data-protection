@@ -128,15 +128,21 @@ func (r *InstallConnectorResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	secureClient, err := r.client.NewSecureClient(data.CAPath.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
-		return
+	var installErr error
+	if data.CAPath.IsNull() || data.CAPath.ValueString() == "" {
+		installErr = r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
+	} else {
+		secureClient, secErr := r.client.NewSecureClient(data.CAPath.ValueString())
+		if secErr != nil {
+			resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", secErr))
+			return
+		}
+		installErr = secureClient.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
 	}
-	if err := secureClient.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString()); err != nil {
+	if installErr != nil {
 		resp.Diagnostics.AddError(
 			"Error installing connector",
-			fmt.Sprintf("Could not install connector: %s", err),
+			fmt.Sprintf("Could not install connector: %s", installErr),
 		)
 		return
 	}
@@ -185,13 +191,19 @@ func (r *InstallConnectorResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	secureClient2, err := r.client.NewSecureClient(data.CAPath.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
-		return
+	var installErr error
+	if data.CAPath.IsNull() || data.CAPath.ValueString() == "" {
+		installErr = r.client.NewInsecureClient().BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
+	} else {
+		secureClient, secErr := r.client.NewSecureClient(data.CAPath.ValueString())
+		if secErr != nil {
+			resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", secErr))
+			return
+		}
+		installErr = secureClient.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString())
 	}
-	if err := secureClient2.BulkInstallConnector(ctx, data.AccessToken.ValueString(), data.UdcName.ValueString(), data.GdpMuHost.ValueString()); err != nil {
-		resp.Diagnostics.AddError("Error installing connector", fmt.Sprintf("Could not install connector: %s", err))
+	if installErr != nil {
+		resp.Diagnostics.AddError("Error installing connector", fmt.Sprintf("Could not install connector: %s", installErr))
 		return
 	}
 

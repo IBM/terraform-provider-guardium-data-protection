@@ -107,16 +107,25 @@ func (r *ImportProfilesResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	secureClient, err := r.client.NewSecureClient(data.CaPath.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
-		return
-	}
 	testConnections := false
 	if !data.TestConnections.IsNull() {
 		testConnections = data.TestConnections.ValueBool()
 	}
-	testWarning, failedProfiles, err := secureClient.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections)
+	var (
+		testWarning    string
+		failedProfiles []string
+		err            error
+	)
+	if data.CaPath.IsNull() || data.CaPath.ValueString() == "" {
+		testWarning, failedProfiles, err = r.client.NewInsecureClient().ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections)
+	} else {
+		secureClient, secErr := r.client.NewSecureClient(data.CaPath.ValueString())
+		if secErr != nil {
+			resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", secErr))
+			return
+		}
+		testWarning, failedProfiles, err = secureClient.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections)
+	}
 	if err != nil {
 		resp.Diagnostics.AddError("Error importing profiles", fmt.Sprintf("Could not import profiles: %s", err))
 		return
@@ -158,16 +167,25 @@ func (r *ImportProfilesResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	secureClient2, err := r.client.NewSecureClient(data.CaPath.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", err))
-		return
-	}
 	testConnections2 := false
 	if !data.TestConnections.IsNull() {
 		testConnections2 = data.TestConnections.ValueBool()
 	}
-	testWarning, failedProfiles, err := secureClient2.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections2)
+	var (
+		testWarning    string
+		failedProfiles []string
+		err            error
+	)
+	if data.CaPath.IsNull() || data.CaPath.ValueString() == "" {
+		testWarning, failedProfiles, err = r.client.NewInsecureClient().ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections2)
+	} else {
+		secureClient, secErr := r.client.NewSecureClient(data.CaPath.ValueString())
+		if secErr != nil {
+			resp.Diagnostics.AddError("Error initialising secure TLS client", fmt.Sprintf("Could not initialise secure TLS client: %s", secErr))
+			return
+		}
+		testWarning, failedProfiles, err = secureClient.ImportProfilesFromFile(ctx, data.AccessToken.ValueString(), data.PathToFile.ValueString(), data.UpdateMode.ValueBool(), testConnections2)
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error importing profiles",
