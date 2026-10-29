@@ -61,11 +61,13 @@ func (s *SecureClient) createSecureHTTPClient() (*http.Client, error) {
 	}, nil
 }
 
-// ImportProfilesFromFile imports profiles from a local file using secure TLS connection
-func (s *SecureClient) ImportProfilesFromFile(ctx context.Context, accessToken, pathToFile string, updateMode, testConnections bool) error {
+// ImportProfilesFromFile imports profiles from a local file using secure TLS connection.
+// The returned warning is non-empty, and failedProfiles lists the profile names, when one or
+// more connection tests failed.
+func (s *SecureClient) ImportProfilesFromFile(ctx context.Context, accessToken, pathToFile string, updateMode, testConnections bool) (string, []string, error) {
 	secureClient, err := s.createSecureHTTPClient()
 	if err != nil {
-		return fmt.Errorf("failed to create secure HTTP client: %w", err)
+		return "", nil, fmt.Errorf("failed to create secure HTTP client: %w", err)
 	}
 
 	return s.Client.ImportProfilesFromFile(ctx, secureClient, accessToken, pathToFile, updateMode, testConnections)
