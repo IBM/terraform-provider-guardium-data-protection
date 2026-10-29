@@ -148,46 +148,6 @@ func (s *SecureClient) DeleteAWSSecretsManager(ctx context.Context, accessToken 
 	return s.Client.DeleteAWSSecretsManager(ctx, secureClient, accessToken, name)
 }
 
-// CreateUCCredential creates a Universal Connector credential using secure TLS connection
-func (s *SecureClient) CreateUCCredential(ctx context.Context, accessToken string, cred *UCCredential) error {
-	secureClient, err := s.createSecureHTTPClient()
-	if err != nil {
-		return fmt.Errorf("failed to create secure HTTP client: %w", err)
-	}
-
-	return s.Client.CreateUCCredential(ctx, secureClient, accessToken, cred)
-}
-
-// UpdateUCCredential updates a Universal Connector credential using secure TLS connection
-func (s *SecureClient) UpdateUCCredential(ctx context.Context, accessToken string, cred *UCCredential) error {
-	secureClient, err := s.createSecureHTTPClient()
-	if err != nil {
-		return fmt.Errorf("failed to create secure HTTP client: %w", err)
-	}
-
-	return s.Client.UpdateUCCredential(ctx, secureClient, accessToken, cred)
-}
-
-// DeleteUCCredential deletes a Universal Connector credential using secure TLS connection
-func (s *SecureClient) DeleteUCCredential(ctx context.Context, accessToken, name string) error {
-	secureClient, err := s.createSecureHTTPClient()
-	if err != nil {
-		return fmt.Errorf("failed to create secure HTTP client: %w", err)
-	}
-
-	return s.Client.DeleteUCCredential(ctx, secureClient, accessToken, name)
-}
-
-// GetUCCredential looks up a Universal Connector credential by name using secure TLS connection
-func (s *SecureClient) GetUCCredential(ctx context.Context, accessToken, name string) (*UCCredentialSummary, error) {
-	secureClient, err := s.createSecureHTTPClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create secure HTTP client: %w", err)
-	}
-
-	return s.Client.GetUCCredential(ctx, secureClient, accessToken, name)
-}
-
 // RegisterVADataSource registers a VA datasource using secure TLS connection
 func (s *SecureClient) RegisterVADataSource(ctx context.Context, accessToken string, payload []byte) error {
 	secureClient, err := s.createSecureHTTPClient()
