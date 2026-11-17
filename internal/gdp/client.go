@@ -224,7 +224,7 @@ func (c *Client) ImportProfilesFromFile(ctx context.Context, httpClient *http.Cl
 	// test results are reported separately as a warning, because failed tests for some
 	// profiles must not block the deployment of the others.
 	importMessage, testResults := splitConnectionTestResults(apiResponse.Message)
-	if importMessage != "" && containsErrorKeywords(importMessage) {
+	if importMessage != "" && (containsErrorKeywords(importMessage) || hasRowValidationMessage(importMessage)) {
 		return "", nil, fmt.Errorf("import profiles failed: %s", apiResponse.Message)
 	}
 
@@ -260,6 +260,19 @@ func failedConnectionTestProfiles(testResults string) []string {
 		}
 	}
 	return failed
+}
+
+// hasRowValidationMessage reports whether any line of an import message is a per-row validation
+// message from Guardium (e.g. `Row number 2 - no uploads found with name "x.jar"`). Guardium skips
+// the affected rows and reports these messages instead of the success message, so they mean that
+// at least one profile was not created. Some of them start with a stray quote character.
+func hasRowValidationMessage(message string) bool {
+	for _, line := range strings.Split(message, "\n") {
+		if strings.HasPrefix(strings.TrimLeft(strings.TrimSpace(line), `"`), "Row number") {
+			return true
+		}
+	}
+	return false
 }
 
 // containsErrorKeywords checks if a message contains error-indicating keywords
