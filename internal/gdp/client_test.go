@@ -510,6 +510,22 @@ func TestImportProfilesFromFile(t *testing.T) {
 			expectError:    true,
 		},
 		{
+			name:           "Row skipped because upload is missing",
+			accessToken:    "test-token",
+			updateMode:     true,
+			serverStatus:   http.StatusOK,
+			serverResponse: `{"ID":"0","Message":"Row number 2 - no uploads found with name \"snowflake-jdbc-3.13.30.jar\"\n"}`,
+			expectError:    true,
+		},
+		{
+			name:           "Row skipped with quoted validation message",
+			accessToken:    "test-token",
+			updateMode:     true,
+			serverStatus:   http.StatusOK,
+			serverResponse: `{"ID":"0","Message":"\"Row number 3 - The parameter \"x\" is mandatory and cannot be empty\n"}`,
+			expectError:    true,
+		},
+		{
 			name:           "Successful import",
 			accessToken:    "test-token",
 			updateMode:     true,
